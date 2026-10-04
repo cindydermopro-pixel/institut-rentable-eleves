@@ -157,6 +157,11 @@ textarea{resize:vertical;min-height:56px}
 .pstage{display:flex;flex-direction:column;gap:6px;min-width:0}
 .pacts{display:flex;gap:6px;flex-wrap:wrap}
 .pnote{min-height:36px;font-size:12px}
+.money{display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px}
+.money label{color:var(--muted);font-weight:600}
+.money input{margin-top:2px;padding:5px 8px}
+.money select{grid-column:1/-1;padding:5px 8px;font-size:12px}
+.tile.warnt{border-color:var(--warn)}
 @media (max-width:640px){.prospect{grid-template-columns:1fr}}
 
 .tbl{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}.tbl th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}.tbl td{padding:8px;border-bottom:1px solid var(--line)}.tbl tr:hover td{background:var(--panel-2)}
@@ -298,9 +303,9 @@ function cat(p){ const now=new Date(); if(p.statut==="won")return "cliente"; if(
 const CATS=[["rappel","À rappeler"],["nouveau","Nouveaux"],["encours","En cours"],["cliente","Clientes"],["perdue","Perdues"],["tous","Tous"]];
 function prospectStats(list,budgetPub){
   const won=list.filter(p=>p.statut==="won"), lost=list.filter(p=>p.statut==="lost"||p.statut==="abandoned"), open=list.filter(p=>p.statut==="open");
-  const ca=won.reduce((s,p)=>s+(num(p.montant??p.valeur)||0),0); const closed=won.length+lost.length;
+  const ca=list.reduce((s,p)=>s+(num(p.montant)||(p.statut==='won'?num(p.valeur)||0:0)),0); const closed=won.length+lost.length; const acAtt=list.filter(p=>p.acompte_statut==='en_attente'); const acAttSum=acAtt.reduce((s,p)=>s+(num(p.acompte)||0),0); const acPaye=list.filter(p=>p.acompte_statut==='paye').reduce((s,p)=>s+(num(p.acompte)||0),0);
   const rappels=list.filter(p=>cat(p)==="rappel").length, nouveaux=list.filter(p=>cat(p)==="nouveau").length;
-  return {total:list.length,open:open.length,won:won.length,lost:lost.length,ca,taux:closed?Math.round(won.length/closed*100):null,rappels,nouveaux,
+  return {acAtt:acAtt.length,acAttSum,acPaye,total:list.length,open:open.length,won:won.length,lost:lost.length,ca,taux:closed?Math.round(won.length/closed*100):null,rappels,nouveaux,
     budget:budgetPub||0, roi:budgetPub?ca/budgetPub:null, cpl:budgetPub&&list.length?budgetPub/list.length:null, cpa:budgetPub&&won.length?budgetPub/won.length:null, panier:won.length?ca/won.length:null};
 }
 function rentaHTML(st,{titre="Rentabilité de ta prospection"}={}){
@@ -310,20 +315,22 @@ function rentaHTML(st,{titre="Rentabilité de ta prospection"}={}){
       <div class="tile"><div class="k">Budget pub</div><div class="v">${fmt(st.budget)}</div><div class="d">${st.cpl!=null?fmt(st.cpl)+" par prospect":"renseigne ton budget pub dans Mon CA"}</div></div>
       <div class="tile ${st.roi!=null?(st.roi>=1?"good":"bad"):""}"><div class="k">Retour sur investissement</div><div class="v">${st.roi!=null?"×"+st.roi.toFixed(1):"—"}</div><div class="d">${st.roi!=null?(st.roi>=1?"chaque euro de pub rapporte "+fmt(st.roi):"pas encore rentable")+"":"en attente de données"}</div></div>
       <div class="tile"><div class="k">Coût par cliente</div><div class="v">${st.cpa!=null?fmt(st.cpa):"—"}</div><div class="d">taux de transformation ${st.taux!=null?st.taux+" %":"—"}</div></div>
+      <div class="tile ${st.acAtt?"warnt":""}"><div class="k">Acomptes</div><div class="v">${fmt(st.acPaye)}</div><div class="d">${st.acAtt?`<b>${st.acAtt} en attente</b> · ${fmt(st.acAttSum)}`:"aucun en attente"}</div></div>
     </div></div>`;
 }
 function prospectCard(p,st,{eleveNames,canAct}){
   const c=cat(p); const late=c==="rappel";
   return `<div class="prospect ${p.statut!=="open"?"closed":""} ${late?"late":""}" data-id="${p.id}">
     <div class="pmain">
-      <div class="pname">${esc(p.nom||"Sans nom")} ${c==="nouveau"?`<span class="pill eleve">nouveau</span>`:""}${late?`<span class="pill pause">à rappeler ${ageTxt(p.rappel_le)==="aujourd'hui"?"aujourd'hui":"· en retard"}</span>`:""}${p.statut!=="open"?`<span class="pill ${GHLSTATUT[p.statut]?.[1]||"termine"}">${GHLSTATUT[p.statut]?.[0]||p.statut}${p.statut==="won"&&(p.montant??p.valeur)?" · "+fmt(p.montant??p.valeur):""}</span>`:""}</div>
+      <div class="pname">${esc(p.nom||"Sans nom")} ${c==="nouveau"?`<span class="pill eleve">nouveau</span>`:""}${late?`<span class="pill pause">à rappeler ${ageTxt(p.rappel_le)==="aujourd'hui"?"aujourd'hui":"· en retard"}</span>`:""}${p.acompte_statut==="en_attente"?`<span class="pill pause">acompte en attente${p.acompte?" · "+fmt(p.acompte):""}</span>`:p.acompte_statut==="paye"?`<span class="pill continuation">acompte payé${p.acompte?" · "+fmt(p.acompte):""}</span>`:""}${p.statut!=="open"?`<span class="pill ${GHLSTATUT[p.statut]?.[1]||"termine"}">${GHLSTATUT[p.statut]?.[0]||p.statut}${p.statut==="won"&&(p.montant??p.valeur)?" · "+fmt(p.montant??p.valeur):""}</span>`:""}</div>
       <div class="note">${esc(p.prestation||"")}${p.source?" · "+esc(p.source):""}${eleveNames?" · <b>"+esc(eleveNames[p.eleve_id]||"")+"</b>":""} · reçu ${ageTxt(p.cree_le)}${p.nb_tentatives?` · ${p.nb_tentatives} appel${p.nb_tentatives>1?"s":""}${p.derniere_action?" (dernier "+ageTxt(p.derniere_action)+")":""}`:""}</div>
       <div class="pcontact">${p.tel?`<a class="btn small" href="${telLink(p.tel)}">☎ ${esc(p.tel)}</a><a class="btn small" href="${waLink(p.tel)}" target="_blank" rel="noopener">WhatsApp</a>`:""}${p.email?`<span class="note">${esc(p.email)}</span>`:""}</div>
       ${canAct&&p.statut==="open"?`<div class="pacts" style="margin-top:8px"><button class="btn small" data-called="${p.id}">✓ J'ai appelé</button><label class="note" style="display:inline-flex;align-items:center;gap:4px">Rappeler le <input type="date" data-rappel="${p.id}" value="${dateInput(p.rappel_le)}" style="width:auto;padding:3px 6px"></label></div>`:""}
     </div>
     <div class="pstage">${canAct?`<select data-stage="${p.id}" ${st.length?"":"disabled"}>${st.map(s=>`<option value="${s.id}" ${s.id===p.stage_id?"selected":""}>${esc(s.nom)}</option>`).join("")}${st.length?"":`<option>${esc(p.stage_nom||"—")}</option>`}</select>
       <div class="pacts">${p.statut==="open"?`<button class="btn small primary" data-won="${p.id}">✓ Cliente</button><button class="btn small" data-lost="${p.id}">Perdue</button>`:`<button class="btn small" data-reopen="${p.id}">Rouvrir</button>`}</div>`:`<span class="pill m1">${esc(p.stage_nom||"—")}</span>`}
-      ${canAct?`<textarea class="pnote" data-note="${p.id}" placeholder="Ma note (ex. veut un devis cure 5 séances)">${esc(p.note_eleve||"")}</textarea>`:(p.note_eleve?`<div class="note">« ${esc(p.note_eleve)} »</div>`:"")}</div>
+      ${canAct?`<div class="money"><label>Vendu <input inputmode="decimal" data-montant="${p.id}" value="${p.montant??""}" placeholder="€"></label><label>Acompte <input inputmode="decimal" data-acompte="${p.id}" value="${p.acompte??""}" placeholder="€"></label><select data-acstat="${p.id}"><option value="aucun" ${(p.acompte_statut||"aucun")==="aucun"?"selected":""}>Pas d'acompte</option><option value="en_attente" ${p.acompte_statut==="en_attente"?"selected":""}>Acompte en attente</option><option value="paye" ${p.acompte_statut==="paye"?"selected":""}>Acompte payé</option></select></div>
+      <textarea class="pnote" data-note="${p.id}" placeholder="Ma note (ex. veut un devis cure 5 séances)">${esc(p.note_eleve||"")}</textarea>`:(p.note_eleve?`<div class="note">« ${esc(p.note_eleve)} »</div>`:"")}</div>
   </div>`;
 }
 function prospectsHTML(list,stagesByPipe,opts){
@@ -331,20 +338,23 @@ function prospectsHTML(list,stagesByPipe,opts){
   return `<div class="list">${list.map(p=>prospectCard(p,stagesByPipe[p.pipeline_id]||[],opts)).join("")}</div>`;
 }
 function wonModal(p,eleveId,onDone){
-  modal(`<h2>🎉 ${esc(p.nom||"Prospect")} devient cliente</h2><p class="note">Le montant est envoyé à GoHighLevel : c'est lui qui remonte la valeur d'achat à Facebook et améliore tes pubs.</p>
+  modal(`<h2>🎉 ${esc(p.nom||"Prospect")} devient cliente</h2><p class="note">Le montant est envoyé à CRM : c'est lui qui remonte la valeur d'achat à Facebook et améliore tes pubs.</p>
     <div class="field"><label>Montant encaissé (€)</label><input id="wAmt" inputmode="decimal" value="${p.montant??p.valeur??""}" placeholder="ex. 350"></div>
     <div class="actions"><button class="btn" id="cancel">Annuler</button><button class="btn primary" id="ok">Valider la vente</button></div>`);
   $("#cancel").onclick=closeModal; $("#wAmt").focus();
   $("#ok").onclick=async()=>{const m=num($("#wAmt").value);closeModal();try{await ghl({action:"stage",eleve_id:eleveId,opportunity_id:p.id,status:"won",montant:m});toast("Bravo, une cliente de plus 🎉");onDone()}catch(e){err(e)}};
 }
 function bindProspects(container,{eleveIdFor,onDone,byId}){
-  container.querySelectorAll("[data-stage]").forEach(s=>s.onchange=async()=>{s.disabled=true;try{await ghl({action:"stage",eleve_id:eleveIdFor(s.dataset.stage),opportunity_id:s.dataset.stage,stage_id:s.value});toast("Étape mise à jour, transmise à GoHighLevel");onDone()}catch(e){err(e);s.disabled=false}});
+  container.querySelectorAll("[data-stage]").forEach(s=>s.onchange=async()=>{s.disabled=true;try{await ghl({action:"stage",eleve_id:eleveIdFor(s.dataset.stage),opportunity_id:s.dataset.stage,stage_id:s.value});toast("Étape mise à jour, transmise à CRM");onDone()}catch(e){err(e);s.disabled=false}});
   const setStatus=(id,status,msg)=>async()=>{try{await ghl({action:"stage",eleve_id:eleveIdFor(id),opportunity_id:id,status});toast(msg);onDone()}catch(e){err(e)}};
   container.querySelectorAll("[data-won]").forEach(b=>b.onclick=()=>wonModal(byId[b.dataset.won]||{id:b.dataset.won},eleveIdFor(b.dataset.won),onDone));
   container.querySelectorAll("[data-lost]").forEach(b=>b.onclick=setStatus(b.dataset.lost,"lost","Marquée perdue"));
   container.querySelectorAll("[data-reopen]").forEach(b=>b.onclick=setStatus(b.dataset.reopen,"open","Prospect rouvert"));
   container.querySelectorAll("[data-note]").forEach(t=>t.onchange=async()=>{const {error}=await sb.from("ir_prospects").update({note_eleve:t.value}).eq("id",t.dataset.note);if(error)return err(error);toast("Note enregistrée")});
   container.querySelectorAll("[data-called]").forEach(b=>b.onclick=async()=>{const p=byId[b.dataset.called]||{};const {error}=await sb.from("ir_prospects").update({nb_tentatives:(p.nb_tentatives||0)+1,derniere_action:new Date().toISOString(),rappel_le:null}).eq("id",b.dataset.called);if(error)return err(error);toast("Appel noté");onDone()});
+  container.querySelectorAll("[data-montant]").forEach(i=>i.onchange=async()=>{const m=num(i.value);const {error}=await sb.from("ir_prospects").update({montant:m}).eq("id",i.dataset.montant);if(error)return err(error);toast("Montant enregistré");try{await ghl({action:"stage",eleve_id:eleveIdFor(i.dataset.montant),opportunity_id:i.dataset.montant,montant:m??0})}catch(e){}onDone()});
+  container.querySelectorAll("[data-acompte]").forEach(i=>i.onchange=async()=>{const {error}=await sb.from("ir_prospects").update({acompte:num(i.value)}).eq("id",i.dataset.acompte);if(error)return err(error);toast("Acompte enregistré")});
+  container.querySelectorAll("[data-acstat]").forEach(s=>s.onchange=async()=>{const {error}=await sb.from("ir_prospects").update({acompte_statut:s.value}).eq("id",s.dataset.acstat);if(error)return err(error);toast("Acompte mis à jour");onDone()});
   container.querySelectorAll("[data-rappel]").forEach(i=>i.onchange=async()=>{const v=i.value?new Date(i.value+"T09:00").toISOString():null;const {error}=await sb.from("ir_prospects").update({rappel_le:v}).eq("id",i.dataset.rappel);if(error)return err(error);toast(v?"Rappel programmé":"Rappel retiré");onDone()});
 }
 function crmFilterBar(list,current,id){ const counts={}; list.forEach(p=>{counts[cat(p)]=(counts[cat(p)]||0)+1}); counts.tous=list.length;
@@ -392,7 +402,7 @@ const Social={
     for(let d=1;d<=days;d++){const ds=`${m.getFullYear()}-${String(m.getMonth()+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;const ps=byDay[ds]||[];
       cells+=`<div class="day ${ds===todayS?"today":""}" data-day="${ds}"><div class="dn">${d}</div>${ps.map(p=>`<button class="post ${p.statut}" data-post="${p.id}" title="${esc(p.titre)}">${TYPES[p.type]?.[0]||"P"} · ${esc(p.titre||CANAUX[p.canal]||"")}</button>`).join("")}</div>`;}
     main.innerHTML=`<div class="topbar"><div><h1>${eleveId&&!adminSelect?"Mes réseaux sociaux":"Réseaux sociaux"}</h1><p class="sub">${inMonth.length?`${inMonth.length} contenu${inMonth.length>1?"s":""} prévu${inMonth.length>1?"s":""} ce mois · ${done} publié${done>1?"s":""}`:"Planifie tes contenus : 2 posts par semaine, c'est le rythme qui fait grandir une communauté."}</p></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">${adminSelect||""}${canConnect?`<button class="btn" id="connectIG" title="Disponible dès que la publication via GoHighLevel est activée">Connecter Instagram / Facebook <span class="pill cindy">bientôt</span></button>`:""}<button class="btn primary" id="newPost">+ Contenu</button></div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">${adminSelect||""}${canConnect?`<button class="btn" id="connectIG" title="Disponible dès que la publication via CRM est activée">Connecter Instagram / Facebook <span class="pill cindy">bientôt</span></button>`:""}<button class="btn primary" id="newPost">+ Contenu</button></div></div>
     <div class="two" style="grid-template-columns:2fr 1fr">
       <div class="card"><div class="calhead"><button class="btn small" id="prevM">‹</button><h2 style="margin:0;text-transform:capitalize">${monthName}</h2><button class="btn small" id="nextM">›</button></div>
         <div class="cal"><div class="wd">Lun</div><div class="wd">Mar</div><div class="wd">Mer</div><div class="wd">Jeu</div><div class="wd">Ven</div><div class="wd">Sam</div><div class="wd">Dim</div>${cells}</div>
@@ -577,8 +587,8 @@ const Admin={
       <div class="field"><label>Institut / centre</label><input id="f-institut" value="${esc(e.institut||"")}"></div><div class="field"><label>Ville</label><input id="f-ville" value="${esc(e.ville||"")}"></div>
       <div class="field"><label>Activité</label><input id="f-metier" value="${esc(e.metier||"")}"></div><div class="field"><label>Instagram</label><input id="f-insta" value="${esc(e.instagram||"")}" placeholder="@compte"></div>
       <div class="field wide"><label>Offre</label><select id="f-offre">${OFFRES.map(o=>`<option ${e.offre===o?"selected":""}>${o}</option>`).join("")}</select></div>
-      <div class="field wide"><label>Identifiant du sous-compte GoHighLevel (Location ID)</label><input id="f-ghl" value="${esc(e.ghl_location_id||"")}" placeholder="ex. ve9EPM428h8vShlRW1KT"><div class="note">Dans GHL : Settings → Business Profile du sous-compte. C'est ce qui relie ses prospects à son espace.</div></div>
-      <div class="field wide"><label>Pipeline GHL à suivre (ID, optionnel)</label><input id="f-pipe" value="${esc(e.ghl_pipeline_id||"")}" placeholder="laisser vide = tous les pipelines"><div class="note">Celui que l'élève travaille (ex. « Suivi Prospect »), pas le pipeline KPI.</div></div>
+      <div class="field wide"><label>Identifiant du sous-compte CRM (Location ID)</label><input id="f-ghl" value="${esc(e.ghl_location_id||"")}" placeholder="ex. ve9EPM428h8vShlRW1KT"><div class="note">Dans CRM : Settings → Business Profile du sous-compte. C'est ce qui relie ses prospects à son espace.</div></div>
+      <div class="field wide"><label>Pipeline CRM à suivre (ID, optionnel)</label><input id="f-pipe" value="${esc(e.ghl_pipeline_id||"")}" placeholder="laisser vide = tous les pipelines"><div class="note">Celui que l'élève travaille (ex. « Suivi Prospect »), pas le pipeline KPI.</div></div>
       <div class="field"><label>Date de début</label><input id="f-debut" type="date" value="${e.date_debut||""}"></div>
       <div class="field"><label>Ton des contenus</label><select id="f-ton"><option ${e.ton==="tutoiement"?"selected":""}>tutoiement</option><option ${e.ton==="vouvoiement"?"selected":""}>vouvoiement</option></select></div>
       <div class="field"><label>CA de départ / mois (€)</label><input id="f-cadep" inputmode="decimal" value="${e.ca_depart??""}"></div><div class="field"><label>Objectif CA / mois (€)</label><input id="f-obj" inputmode="decimal" value="${e.objectif_ca??""}"></div>
@@ -608,11 +618,11 @@ const Admin={
     const st=prospectStats(scoped,budget);
     // tableau par élève
     const perE=this.eleves.map(e=>{const l=all.filter(p=>p.eleve_id===e.id);const b=(sv||[]).filter(r=>r.eleve_id===e.id).reduce((s,r)=>s+(num(r.budget_pub)||0),0);return {e,st:prospectStats(l,b)}}).filter(x=>x.st.total||x.e.ghl_location_id);
-    main.innerHTML=`<div class="topbar"><div><h1>Prospects</h1><p class="sub">${linked.length} élève${linked.length>1?"s":""} reliée${linked.length>1?"s":""} à GoHighLevel · ${all.length} prospects au total</p></div>
+    main.innerHTML=`<div class="topbar"><div><h1>Prospects</h1><p class="sub">${linked.length} élève${linked.length>1?"s":""} reliée${linked.length>1?"s":""} à CRM · ${all.length} prospects au total</p></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap"><select id="pfE" style="width:auto"><option value="">Toutes les élèves</option>${this.eleves.map(e=>`<option value="${e.id}" ${f.eleve===e.id?"selected":""}>${esc(e.prenom)}</option>`).join("")}</select><button class="btn primary" id="syncAll">↻ Synchroniser</button></div></div>
     ${rentaHTML(st,{titre:f.eleve?"Rentabilité · "+esc(names[f.eleve]):"Rentabilité globale des pubs"})}
     ${!f.eleve&&perE.length?`<div class="card" style="margin-top:14px"><h2>Par élève</h2><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Élève</th><th>Prospects</th><th>À rappeler</th><th>Clientes</th><th>Transfo</th><th>CA généré</th><th>Budget pub</th><th>ROI</th></tr></thead><tbody>${perE.map(({e,st})=>`<tr data-el="${e.id}"><td><b>${esc(e.prenom)}</b> <span class="note">${esc(e.institut||"")}</span></td><td>${st.total}</td><td>${st.rappels?`<span class="pill pause">${st.rappels}</span>`:"—"}</td><td>${st.won}</td><td>${st.taux!=null?st.taux+" %":"—"}</td><td>${fmt(st.ca)}</td><td>${fmt(st.budget)}</td><td>${st.roi!=null?"×"+st.roi.toFixed(1):"—"}</td></tr>`).join("")}</tbody></table></div></div>`:""}
-    ${linked.length?"":`<div class="card" style="margin-top:14px"><b>Aucune élève n'est encore reliée.</b><div class="note">Fiche élève → « Modifier la fiche » → identifiant du sous-compte GHL. Et ta clé GHL dans Réglages.</div></div>`}
+    ${linked.length?"":`<div class="card" style="margin-top:14px"><b>Aucune élève n'est encore reliée.</b><div class="note">Fiche élève → « Modifier la fiche » → identifiant du sous-compte CRM. Et ta clé CRM dans Réglages.</div></div>`}
     ${crmFilterBar(scoped,f.cat,"chips")}
     <div id="plist">${prospectsHTML(crmFilter(scoped,f.cat),stagesByPipe,{eleveNames:f.eleve?null:names,canAct:true,filter:f.cat!=="tous"})}</div>`;
     $("#pfE").onchange=()=>{this._pf={...f,eleve:$("#pfE").value};this.prospects()};
@@ -627,7 +637,7 @@ const Admin={
     const rows=Object.entries(threads).map(([id,t])=>({e:this.eleves.find(x=>x.id===id),...t})).filter(r=>r.e).sort((a,b)=>(b.unread-a.unread)||(new Date(b.last.created_at)-new Date(a.last.created_at)));
     main.innerHTML=`<div class="topbar"><div><h1>Messages</h1><p class="sub">Les conversations avec tes élèves. Clique pour répondre depuis sa fiche.</p></div></div>
     <div class="card">${rows.length?rows.map(r=>`<div class="item" data-el="${r.e.id}" style="cursor:pointer"><div style="min-width:0"><div class="t">${esc(r.e.prenom)} ${r.unread?`<span class="badge pill" style="background:var(--accent);color:var(--accent-fg)">${r.unread}</span>`:""}</div><div class="s" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60vw">${r.last.auteur==="cindy"?"Toi : ":""}${esc(r.last.contenu)}</div></div><div class="note" style="white-space:nowrap">${dtfr(r.last.created_at)}</div></div>`).join(""):`<div class="note">Aucun message pour l'instant.</div>`}</div>
-    <div class="card" style="margin-top:14px"><h2>Conversations prospects <span class="pill cindy">bientôt</span></h2><div class="note">Les échanges SMS / WhatsApp / Instagram entre les élèves et leurs prospects (GoHighLevel) remonteront ici dès la prochaine étape.</div></div>`;
+    <div class="card" style="margin-top:14px"><h2>Conversations prospects <span class="pill cindy">bientôt</span></h2><div class="note">Les échanges SMS / WhatsApp / Instagram entre les élèves et leurs prospects (CRM) remonteront ici dès la prochaine étape.</div></div>`;
     main.querySelectorAll("[data-el]").forEach(r=>r.onclick=()=>{this.current=r.dataset.el;this.view="eleves";this.render()});
   },
   async reseaux(){
@@ -639,11 +649,11 @@ const Admin={
   async reglages(){
     const main=$("#main"); const {data:cfg}=await sb.from("ir_config").select("*"); const c={}; (cfg||[]).forEach(r=>c[r.key]=r.value);
     main.innerHTML=`<div class="topbar"><div><h1>Réglages</h1></div></div>
-    <div class="two"><div class="card"><h2>Connexion GoHighLevel</h2><p class="note" style="margin:0 0 10px">Clé d'agence (Settings → Private Integrations dans ton agence GHL, avec les droits <b>opportunities</b>, <b>contacts</b>, <b>locations</b> et <b>oauth</b>). Elle est stockée côté serveur et jamais envoyée aux élèves.</p>
-      <div class="field"><label>Clé d'agence (Private Integration token)</label><input id="ghlTok" type="password" value="${esc(c.ghl_agency_token||"")}" placeholder="pit-…" autocomplete="off"></div>
+    <div class="two"><div class="card"><h2>Connexion CRM</h2><p class="note" style="margin:0 0 10px">Clé d'agence (Settings → Private Integrations dans ton agence CRM, avec les droits <b>opportunities</b>, <b>contacts</b>, <b>locations</b> et <b>oauth</b>). Elle est stockée côté serveur et jamais envoyée aux élèves.</p>
+      <div class="field"><label>Clé d'agence (Private Integration)</label><input id="ghlTok" type="password" value="${esc(c.ghl_agency_token||"")}" placeholder="pit-…" autocomplete="off"></div>
       <div class="field" style="margin-top:8px"><label>Identifiant de l'agence (Company ID)</label><input id="ghlCo" value="${esc(c.ghl_company_id||"")}" placeholder="Settings → Company → Company ID"></div>
       <div class="actions"><button class="btn" id="ghlTest">Tester la connexion</button><button class="btn primary" id="ghlSave">Enregistrer</button></div><div id="ghlRes" class="note" style="margin-top:8px"></div></div>
-    <div class="card"><h2>Comment ça marche</h2><ol style="padding-left:18px;margin:0;display:flex;flex-direction:column;gap:6px"><li>Les prospects des pubs arrivent dans le sous-compte GHL de l'élève (déjà en place).</li><li>Sur chaque fiche élève, tu colles l'identifiant de son sous-compte.</li><li>L'élève voit ses prospects dans son espace, les appelle, et change l'étape (RDV pris, cliente…).</li><li>Le changement est écrit dans GHL, et c'est ton workflow GHL « Facebook Conversion API » qui renvoie l'info à Meta.</li></ol></div></div>`;
+    <div class="card"><h2>Comment ça marche</h2><ol style="padding-left:18px;margin:0;display:flex;flex-direction:column;gap:6px"><li>Les prospects des pubs arrivent dans le sous-compte CRM de l'élève (déjà en place).</li><li>Sur chaque fiche élève, tu colles l'identifiant de son sous-compte.</li><li>L'élève voit ses prospects dans son espace, les appelle, et change l'étape (RDV pris, cliente…).</li><li>Le changement est écrit dans CRM, et c'est ton workflow CRM « Facebook Conversion API » qui renvoie l'info à Meta.</li></ol></div></div>`;
     $("#ghlSave").onclick=async()=>{const rows=[{key:"ghl_agency_token",value:$("#ghlTok").value.trim(),updated_at:new Date().toISOString()},{key:"ghl_company_id",value:$("#ghlCo").value.trim(),updated_at:new Date().toISOString()}];const {error}=await sb.from("ir_config").upsert(rows);if(error)return err(error);toast("Enregistré")};
     $("#ghlTest").onclick=async()=>{const r=$("#ghlRes");r.textContent="Test en cours…";try{const d=await ghl({action:"test"});r.innerHTML=d.ok?`✅ Connexion OK${d.locations?.length?` · sous-comptes visibles : ${d.locations.map(l=>esc(l.name)+" <code>"+esc(l.id)+"</code>").join(", ")}`:""}`:`❌ ${esc(d.message)}`}catch(e){r.textContent="❌ "+e.message}};
   },
