@@ -1,0 +1,782 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Institut Rentable · Espace élèves</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Manrope:wght@400;500;600;700&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
+<style>
+:root{
+  --bg:#F6F3EF; --panel:#FFFFFF; --panel-2:#EFEAE4; --line:#E1D9D1; --fg:#2A2320; --muted:#7A6E66;
+  --accent:#9E2E5A; --accent-soft:#F6E1E9; --accent-fg:#FFFFFF;
+  --ok:#2E7D5B; --ok-soft:#DDF0E6; --warn:#B7791F; --warn-soft:#FBEBD0; --info:#3B5F8A; --info-soft:#DDE7F2;
+  --display:"Fraunces","Georgia",serif; --body:"Manrope","Segoe UI",system-ui,sans-serif; --r:10px;
+  --shadow:0 1px 2px rgba(42,35,32,.06),0 6px 18px rgba(42,35,32,.05);
+}
+@media (prefers-color-scheme: dark){ :root{
+  --bg:#1B1715; --panel:#242020; --panel-2:#2D2826; --line:#3A3330; --fg:#F0E9E3; --muted:#A79B92;
+  --accent:#E07AA0; --accent-soft:#3B2430; --accent-fg:#1B1715;
+  --ok:#6FCB9C; --ok-soft:#1F3A2E; --warn:#E5B35A; --warn-soft:#3E3320; --info:#8FB3DC; --info-soft:#243244;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 18px rgba(0,0,0,.25); color-scheme:dark }}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:14px;line-height:1.5}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+h1{font-family:var(--display);font-weight:600;font-size:28px;margin:0;line-height:1.1;text-wrap:balance}
+h2{font-family:var(--display);font-weight:600;font-size:19px;margin:0 0 10px;line-height:1.2}
+h3{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 8px;font-weight:700}
+.sub{color:var(--muted);margin:4px 0 0}
+.note{font-size:12px;color:var(--muted)}
+.btn{border:1px solid var(--line);background:var(--panel);padding:8px 14px;border-radius:8px;font-weight:600;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{background:var(--panel-2)}
+a.btn{text-decoration:none;white-space:nowrap}
+.btn.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.small{padding:5px 10px;font-size:12px}
+.btn.danger{color:var(--accent)}
+.btn:disabled{opacity:.5;cursor:default}
+
+/* login */
+.login{min-height:100%;display:flex;align-items:center;justify-content:center;padding:24px 16px}
+.login .card{width:min(420px,100%)}
+.spaces{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.space{border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:10px 12px;text-align:left;display:flex;flex-direction:column;gap:2px}
+.space span{font-size:12px;color:var(--muted)}
+.space.on{border-color:var(--accent);background:var(--accent-soft)}
+.space.on b{color:var(--accent)}
+.previewbar{position:sticky;top:0;z-index:5;background:var(--accent);color:var(--accent-fg);padding:8px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px}
+.previewbar .btn{background:var(--accent-fg);color:var(--accent);border-color:transparent}
+.login .brand{font-family:var(--display);font-size:26px;font-weight:600;margin-bottom:4px}
+
+/* app */
+.app{display:flex;min-height:100%}
+.rail{width:220px;flex:none;padding:22px 16px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:6px;position:sticky;top:0;height:100vh}
+.brand{font-family:var(--display);font-size:19px;font-weight:600;line-height:1.15;margin:0 8px 18px}
+.brand small{display:block;font-family:var(--body);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-top:4px}
+.nav{background:none;border:0;text-align:left;padding:9px 10px;border-radius:8px;font-weight:600;color:var(--muted);display:flex;align-items:center;gap:8px}
+.nav.active{background:var(--accent-soft);color:var(--accent)}
+.nav:hover:not(.active){background:var(--panel-2)}
+.nav .badge{margin-left:auto;background:var(--accent);color:var(--accent-fg);font-size:11px;padding:1px 7px;border-radius:99px}
+.rail .foot{margin-top:auto;font-size:12px;color:var(--muted);padding:0 8px;display:flex;flex-direction:column;gap:6px}
+.main{flex:1;min-width:0;padding-block:24px;padding-inline:28px;max-width:1240px}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:22px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px}
+.tile .k{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.tile .v{font-family:var(--display);font-size:26px;font-weight:600;margin-top:4px;font-variant-numeric:tabular-nums}
+.tile .d{font-size:12px;color:var(--muted);margin-top:2px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px}
+.list{display:flex;flex-direction:column;gap:8px}
+.row{display:grid;grid-template-columns:1.6fr 1fr 1.2fr 1.1fr 40px;gap:12px;align-items:center;padding:12px 14px;border:1px solid var(--line);border-radius:var(--r);background:var(--panel);cursor:pointer;min-width:0}
+.row:hover{border-color:var(--accent);box-shadow:var(--shadow)}
+.row .name{font-weight:700}
+.row .inst{color:var(--muted);font-size:12px}
+.row .chev{color:var(--muted);text-align:right}
+@media (max-width:760px){.row{grid-template-columns:1.4fr 1fr 40px}.row>.hide-m{display:none}}
+.pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:11px;font-weight:700;white-space:nowrap}
+.pill.onboarding{background:var(--info-soft);color:var(--info)}
+.pill.m1,.pill.m2,.pill.m3{background:var(--accent-soft);color:var(--accent)}
+.pill.continuation{background:var(--ok-soft);color:var(--ok)}
+.pill.pause{background:var(--warn-soft);color:var(--warn)}
+.pill.termine{background:var(--panel-2);color:var(--muted)}
+.pill.eleve{background:var(--ok-soft);color:var(--ok)}
+.pill.cindy{background:var(--panel-2);color:var(--muted)}
+.bar{height:8px;background:var(--panel-2);border-radius:99px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:99px;transition:width .3s}
+.bar.ok i{background:var(--ok)}
+.pct{font-size:12px;color:var(--muted);margin-top:3px;font-variant-numeric:tabular-nums}
+.detail{display:grid;grid-template-columns:1.1fr 1.3fr .9fr;gap:16px;align-items:start}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+@media (max-width:1000px){.detail{grid-template-columns:1fr 1fr}}
+@media (max-width:700px){.detail,.two{grid-template-columns:1fr}}
+.dhead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.dhead .meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:6px;color:var(--muted);font-size:13px}
+select,input[type=text],input[type=email],input[type=date],input[type=datetime-local],input[type=url],input:not([type]),textarea{padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--panel);width:100%;min-width:0}
+textarea{resize:vertical;min-height:56px}
+.group{margin-bottom:14px}
+.check{display:flex;align-items:flex-start;gap:10px;padding:6px 4px;border-radius:6px}
+.check:hover{background:var(--panel-2)}
+.check input{width:18px;height:18px;margin:2px 0 0;accent-color:var(--accent);flex:none}
+.check label{flex:1;cursor:pointer;min-width:0}
+.check.done label{color:var(--muted);text-decoration:line-through}
+.check .when{font-size:11px;color:var(--muted);white-space:nowrap}
+.check .rm{border:0;background:none;color:var(--muted);padding:0 4px;font-size:16px;line-height:1;opacity:0}
+.check:hover .rm{opacity:1}
+.check.locked{opacity:.75}
+.addline{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+.addline input,.addline select{flex:1}
+.addline input{min-width:140px}
+.months{display:flex;flex-direction:column;gap:12px}
+.month{border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;background:var(--bg)}
+.month .mh{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}
+.month .mh b{font-family:var(--display);font-size:16px}
+.month .mh span{font-size:12px;color:var(--muted)}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
+.field label{display:block;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:3px}
+.field input,.field textarea{font-variant-numeric:tabular-nums}
+.field.wide{grid-column:1/-1}
+.coach{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13px}
+.coach input{accent-color:var(--accent);width:16px;height:16px}
+.chart{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;align-items:end;height:150px;padding:8px 4px 0;position:relative;margin-bottom:6px}
+.chart .col{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:4px}
+.chart .col i{display:block;width:100%;max-width:56px;background:var(--accent-soft);border:1px solid var(--accent);border-bottom:0;border-radius:6px 6px 0 0;min-height:2px}
+.chart .col.hit i{background:var(--ok-soft);border-color:var(--ok)}
+.chart .col em{font-style:normal;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}
+.chart .col span{font-size:11px;color:var(--muted)}
+.chart .goal{position:absolute;left:0;right:0;border-top:1px dashed var(--warn);font-size:10px;color:var(--warn);text-align:right;padding-right:2px;pointer-events:none}
+.gap{color:var(--muted);font-size:13px}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.form .field.wide{grid-column:1/-1}
+@media (max-width:520px){.form{grid-template-columns:1fr}}
+.actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
+.modal{position:fixed;inset:0;background:rgba(20,14,12,.45);display:flex;align-items:center;justify-content:center;padding:16px;z-index:10}
+.modal .card{width:min(640px,100%);max-height:90vh;overflow:auto}
+.empty{color:var(--muted);text-align:center;padding:30px 16px;border:1px dashed var(--line);border-radius:var(--r)}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:8px 14px;border-radius:99px;font-size:13px;font-weight:600;z-index:20}
+.item{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+.item:last-child{border-bottom:0}
+.item .t{font-weight:600}
+.item .s{font-size:12px;color:var(--muted)}
+.item .rm{border:0;background:none;color:var(--muted);font-size:16px}
+.thread{display:flex;flex-direction:column;gap:8px;max-height:380px;overflow:auto;padding:4px 0}
+.msg{max-width:85%;padding:8px 12px;border-radius:12px;background:var(--panel-2);align-self:flex-start;white-space:pre-wrap;word-break:break-word}
+.msg.me{background:var(--accent-soft);align-self:flex-end}
+.msg .s{display:block;font-size:11px;color:var(--muted);margin-top:2px}
+.compose{display:flex;gap:6px;margin-top:8px}
+.compose textarea{flex:1;min-height:40px}
+.prospect{display:grid;grid-template-columns:1.4fr 1fr;gap:14px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--r);background:var(--panel);min-width:0}
+.prospect.closed{opacity:.7}
+.pname{font-weight:700;font-size:15px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.pcontact{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px}
+.pcontact a{text-decoration:none}
+.pstage{display:flex;flex-direction:column;gap:6px;min-width:0}
+.pacts{display:flex;gap:6px;flex-wrap:wrap}
+.pnote{min-height:36px;font-size:12px}
+@media (max-width:640px){.prospect{grid-template-columns:1fr}}
+
+.tbl{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}.tbl th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}.tbl td{padding:8px;border-bottom:1px solid var(--line)}.tbl tr:hover td{background:var(--panel-2)}
+.item.todo .t{font-weight:500}
+.coachbox{padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.cr{margin-top:6px;padding:8px 10px;background:var(--panel-2);border-radius:8px;font-size:13px;white-space:pre-wrap}
+.renta .rh{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:baseline;margin-bottom:10px}
+.tile.hero{background:var(--accent-soft);border-color:var(--accent)}
+.tile.good .v{color:var(--ok)} .tile.bad .v{color:var(--warn)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0 10px}
+.chip{border:1px solid var(--line);background:var(--panel);padding:5px 11px;border-radius:99px;font-weight:600;font-size:13px;color:var(--muted)}
+.chip b{font-variant-numeric:tabular-nums;margin-left:2px}
+.chip.on{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.prospect.late{border-color:var(--warn)}
+.calhead{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal .wd{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700;text-align:center;padding:4px 0}
+.day{min-height:78px;border:1px solid var(--line);border-radius:8px;padding:4px;background:var(--bg);display:flex;flex-direction:column;gap:3px;cursor:pointer;min-width:0}
+.day.empty{border:0;background:none;cursor:default}
+.day.today{border-color:var(--accent)}
+.day .dn{font-size:11px;color:var(--muted);font-weight:700}
+.day.today .dn{color:var(--accent)}
+.post{border:0;border-radius:5px;padding:2px 5px;font-size:11px;text-align:left;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:var(--panel-2);color:var(--muted)}
+.post.a_faire,.sw.a_faire{background:var(--warn-soft);color:var(--warn)}
+.post.pret,.sw.pret{background:var(--info-soft);color:var(--info)}
+.post.programme,.sw.programme{background:var(--accent-soft);color:var(--accent)}
+.post.publie,.sw.publie{background:var(--ok-soft);color:var(--ok)}
+.post.idee,.sw.idee{background:var(--panel-2);color:var(--muted)}
+.legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;font-size:12px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.sw{display:inline-block;width:12px;height:12px;border-radius:3px}
+@media (max-width:1000px){.two[style]{grid-template-columns:1fr!important}}
+@media (max-width:640px){.day{min-height:54px}.post{font-size:10px;padding:1px 3px}}
+.welcome{background:linear-gradient(135deg,var(--accent-soft),var(--panel));border:1px solid var(--line);border-radius:var(--r);padding:20px 22px;margin-bottom:18px}
+.welcome h1{font-size:26px}
+.stage{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.stage div{padding:8px 10px;border-radius:8px;background:var(--panel);border:1px solid var(--line);font-size:12px;color:var(--muted)}
+.stage div.on{border-color:var(--accent);color:var(--accent);font-weight:700}
+.stage div.past{color:var(--ok)}
+@media (max-width:760px){
+  .app{flex-direction:column}
+  .rail{width:auto;height:auto;position:static;flex-direction:row;flex-wrap:wrap;border-right:0;border-bottom:1px solid var(--line);padding:14px 16px;gap:4px}
+  .brand{width:100%;margin:0 0 8px;font-size:17px}
+  .rail .foot{display:none}
+  .nav{padding:7px 10px;font-size:13px}
+  .main{padding-inline:16px}
+  .stage{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<div id="modal" hidden></div>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+const SUPABASE_URL="https://cfbhetypkiwfewervdmu.supabase.co";
+const SUPABASE_KEY="sb_publishable_T3vqwqXchtbMnE6YKheT-w_aKFY1JPc";
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+const STATUTS=[["onboarding","Onboarding"],["m1","Mois 1 · Mise en place"],["m2","Mois 2 · Ads"],["m3","Mois 3 · Suivi"],["continuation","Continuation"],["pause","En pause"],["termine","Terminé"]];
+const OFFRES=["Accompagnement complet (4 997 € HT)","Stratégie d'acquisition (3 600 € HT)","Gestion d'agenda","Réseaux Rentables (497 €)","Formation Dermo-esthétique","Sur mesure"];
+const MOIS=[[1,"Mois 1","Mise en place & restructuration"],[2,"Mois 2","Lancement des ads"],[3,"Mois 3","Suivi & optimisation"]];
+
+const $=s=>document.querySelector(s);
+const root=$("#root");
+const fmt=n=>(n==null||n===""||isNaN(n))?"—":new Intl.NumberFormat("fr-FR",{style:"currency",currency:"EUR",maximumFractionDigits:0}).format(n);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const dfr=s=>s?new Date(s).toLocaleDateString("fr-FR",{day:"numeric",month:"short"}):"";
+const dtfr=s=>s?new Date(s).toLocaleString("fr-FR",{weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):"";
+const num=v=>{const n=parseFloat(String(v??"").replace(/\s/g,"").replace(",","."));return isNaN(n)?null:n};
+const toast=m=>{const t=$("#toast");t.textContent=m;t.hidden=false;clearTimeout(t._t);t._t=setTimeout(()=>t.hidden=true,2000)};
+const statLabel=k=>(STATUTS.find(s=>s[0]===k)||STATUTS[0])[1];
+const err=e=>{console.error(e);toast(e?.message||"Une erreur est survenue")};
+function modal(html){const m=$("#modal");m.className="modal";m.hidden=false;m.innerHTML=`<div class="card">${html}</div>`;m.onclick=ev=>{if(ev.target===m)closeModal()}}
+function closeModal(){const m=$("#modal");m.hidden=true;m.innerHTML=""}
+function confirmBox(msg,fn){modal(`<p>${msg}</p><div class="actions"><button class="btn" id="cancel">Annuler</button><button class="btn primary" id="ok">Confirmer</button></div>`);$("#cancel").onclick=closeModal;$("#ok").onclick=()=>{closeModal();fn()}}
+
+// ================= AUTH =================
+let session=null, isAdmin=false, me=null;
+const inFrame=(()=>{try{return window.self!==window.top}catch{return true}})();
+const qs=new URLSearchParams(location.search);
+const prefillEmail=(qs.get("email")||"").trim().toLowerCase();
+function renderLogin(msg,space,sentTo){
+  space=space||(()=>{try{return localStorage.getItem("ir_space")||"eleve"}catch{return "eleve"}})();
+  try{localStorage.setItem("ir_space",space)}catch{}
+  const isCoach=space==="coach";
+  root.innerHTML=`<div class="login"><div class="card">
+    <div class="brand" style="margin-bottom:12px">Institut Rentable</div>
+    <div class="spaces"><button class="space ${!isCoach?"on":""}" data-space="eleve"><b>Espace élève</b><span>Mon parcours, mes prospects, ma formation</span></button><button class="space ${isCoach?"on":""}" data-space="coach"><b>Espace coach</b><span>Suivi de toutes les élèves</span></button></div>
+    ${sentTo?`<p style="color:var(--ok);font-weight:600;margin:14px 0 6px">Email envoyé à ${esc(sentTo)}.</p><p class="sub" style="margin:0 0 12px">Ouvre le mail (regarde les spams) et <b>tape le code à 6 chiffres</b> qu'il contient. ${inFrame?"":"Tu peux aussi cliquer sur le lien du mail."}</p>
+      <div class="field"><label for="code">Code reçu</label><input id="code" inputmode="numeric" autocomplete="one-time-code" placeholder="123456" style="font-size:22px;letter-spacing:.3em;text-align:center"></div>
+      <div class="actions"><button class="btn" id="again">Renvoyer</button><button class="btn primary" id="verify">Me connecter</button></div>`
+    :`<p class="sub" style="margin:14px 0 16px">${isCoach?"Réservé à l'équipe Institut Rentable. Entre ton email coach pour recevoir ton code de connexion.":"Entre l'email que Cindy a enregistré pour toi, tu reçois un code de connexion. Pas de mot de passe."}</p>
+      ${msg?`<p style="color:var(--ok);font-weight:600">${msg}</p>`:""}
+      <div class="field"><label for="email">Email</label><input type="email" id="email" value="${esc(prefillEmail)}" placeholder="${isCoach?"coach@institut-rentable.com":"toi@toninstitut.fr"}" autocomplete="email"></div>
+      <div class="actions"><button class="btn primary" id="go">Recevoir mon code</button></div>
+      <p class="note" style="margin-top:12px">${isCoach?"Un email élève entré ici ouvrira simplement l'espace élève.":"Pas encore d'accès ? Écris à Cindy, c'est elle qui active ton espace."}</p>`}
+  </div></div>`;
+  root.querySelectorAll("[data-space]").forEach(b=>b.onclick=()=>renderLogin(null,b.dataset.space));
+  if(sentTo){
+    const verify=async()=>{const token=$("#code").value.replace(/\D/g,""); if(token.length<6) return toast("Code à 6 chiffres"); $("#verify").disabled=true;
+      const {data,error}=await sb.auth.verifyOtp({email:sentTo,token,type:"email"}); if(error){toast("Code incorrect ou expiré");$("#verify").disabled=false;return} session=data.session; boot();};
+    $("#verify").onclick=verify; $("#code").onkeydown=e=>{if(e.key==="Enter")verify()}; $("#code").focus();
+    $("#again").onclick=()=>renderLogin(null,space);
+    return;
+  }
+  const go=async()=>{const email=$("#email").value.trim().toLowerCase(); if(!email) return toast("Entre ton email");
+    $("#go").disabled=true;
+    const {error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:location.origin+location.pathname}});
+    if(error){err(error);$("#go").disabled=false;return}
+    renderLogin(null,space,email);};
+  $("#go").onclick=go; $("#email").onkeydown=e=>{if(e.key==="Enter")go()}; $("#email").focus();
+}
+async function boot(){
+  const {data:{session:s}}=await sb.auth.getSession(); session=s;
+  if(!session) return renderLogin();
+  const {data:adm}=await sb.rpc("ir_is_admin"); isAdmin=!!adm;
+  if(isAdmin) return Admin.start();
+  const {data:el}=await sb.from("ir_me").select("*").maybeSingle();
+  if(!el){ root.innerHTML=`<div class="login"><div class="card"><div class="brand">Institut Rentable</div><p>Tu es bien connectée avec <b>${esc(session.user.email)}</b>, mais cette adresse n'est pas encore rattachée à un dossier élève.</p><p>Envoie un message à Cindy pour qu'elle l'active, puis reviens ici.</p><div class="actions"><button class="btn" id="out">Se déconnecter</button></div></div></div>`; $("#out").onclick=logout; return; }
+  me=el; Eleve.start();
+}
+async function logout(){await sb.auth.signOut();location.reload()}
+sb.auth.onAuthStateChange((ev,s)=>{ if(ev==="SIGNED_IN"&&!session){session=s;boot()} if(ev==="SIGNED_OUT"){session=null;renderLogin()} });
+
+// ================= PROSPECTS / CRM (commun admin / élève) =================
+const GHLSTATUT={open:["En cours","onboarding"],won:["Cliente","continuation"],lost:["Perdue","termine"],abandoned:["Abandonnée","pause"]};
+async function ghl(body){ if(typeof Eleve!=="undefined"&&Eleve.preview&&me&&!body.eleve_id) body={...body,eleve_id:me.id}; const {data,error}=await sb.functions.invoke("ghl",{body}); if(error){ let m=error.message; try{const j=await error.context?.json(); if(j?.error) m=j.error;}catch{} throw new Error(m);} if(data?.error) throw new Error(data.error); return data; }
+const telLink=t=>t?`tel:${t.replace(/\s/g,"")}`:"";
+const waLink=t=>{if(!t)return "";let n=t.replace(/[^\d+]/g,"");if(n.startsWith("0"))n="33"+n.slice(1);return "https://wa.me/"+n.replace("+","")};
+const startOfDay=d=>{const x=new Date(d);x.setHours(0,0,0,0);return x};
+const ageTxt=d=>{if(!d)return "";const a=Math.floor((startOfDay(new Date())-startOfDay(new Date(d)))/864e5);return a<=0?"aujourd'hui":a===1?"hier":"il y a "+a+" j"};
+const dateInput=d=>d?new Date(new Date(d).getTime()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10):"";
+// Catégorie CRM d'un prospect
+function cat(p){ const now=new Date(); if(p.statut==="won")return "cliente"; if(p.statut==="lost"||p.statut==="abandoned")return "perdue";
+  if(p.rappel_le&&new Date(p.rappel_le)<=new Date(now.getTime()+864e5*0+86399999)&&startOfDay(p.rappel_le)<=startOfDay(now))return "rappel";
+  if(!p.derniere_action&&!p.nb_tentatives)return "nouveau"; return "encours"; }
+const CATS=[["rappel","À rappeler"],["nouveau","Nouveaux"],["encours","En cours"],["cliente","Clientes"],["perdue","Perdues"],["tous","Tous"]];
+function prospectStats(list,budgetPub){
+  const won=list.filter(p=>p.statut==="won"), lost=list.filter(p=>p.statut==="lost"||p.statut==="abandoned"), open=list.filter(p=>p.statut==="open");
+  const ca=won.reduce((s,p)=>s+(num(p.montant??p.valeur)||0),0); const closed=won.length+lost.length;
+  const rappels=list.filter(p=>cat(p)==="rappel").length, nouveaux=list.filter(p=>cat(p)==="nouveau").length;
+  return {total:list.length,open:open.length,won:won.length,lost:lost.length,ca,taux:closed?Math.round(won.length/closed*100):null,rappels,nouveaux,
+    budget:budgetPub||0, roi:budgetPub?ca/budgetPub:null, cpl:budgetPub&&list.length?budgetPub/list.length:null, cpa:budgetPub&&won.length?budgetPub/won.length:null, panier:won.length?ca/won.length:null};
+}
+function rentaHTML(st,{titre="Rentabilité de ta prospection"}={}){
+  return `<div class="card renta"><div class="rh"><h2>${titre}</h2><span class="note">CA encaissé via les prospects vs budget pub déclaré</span></div>
+    <div class="tiles" style="margin:0">
+      <div class="tile hero"><div class="k">CA généré</div><div class="v">${fmt(st.ca)}</div><div class="d">${st.won} cliente${st.won>1?"s":""} · panier moyen ${st.panier!=null?fmt(st.panier):"—"}</div></div>
+      <div class="tile"><div class="k">Budget pub</div><div class="v">${fmt(st.budget)}</div><div class="d">${st.cpl!=null?fmt(st.cpl)+" par prospect":"renseigne ton budget pub dans Mon CA"}</div></div>
+      <div class="tile ${st.roi!=null?(st.roi>=1?"good":"bad"):""}"><div class="k">Retour sur investissement</div><div class="v">${st.roi!=null?"×"+st.roi.toFixed(1):"—"}</div><div class="d">${st.roi!=null?(st.roi>=1?"chaque euro de pub rapporte "+fmt(st.roi):"pas encore rentable")+"":"en attente de données"}</div></div>
+      <div class="tile"><div class="k">Coût par cliente</div><div class="v">${st.cpa!=null?fmt(st.cpa):"—"}</div><div class="d">taux de transformation ${st.taux!=null?st.taux+" %":"—"}</div></div>
+    </div></div>`;
+}
+function prospectCard(p,st,{eleveNames,canAct}){
+  const c=cat(p); const late=c==="rappel";
+  return `<div class="prospect ${p.statut!=="open"?"closed":""} ${late?"late":""}" data-id="${p.id}">
+    <div class="pmain">
+      <div class="pname">${esc(p.nom||"Sans nom")} ${c==="nouveau"?`<span class="pill eleve">nouveau</span>`:""}${late?`<span class="pill pause">à rappeler ${ageTxt(p.rappel_le)==="aujourd'hui"?"aujourd'hui":"· en retard"}</span>`:""}${p.statut!=="open"?`<span class="pill ${GHLSTATUT[p.statut]?.[1]||"termine"}">${GHLSTATUT[p.statut]?.[0]||p.statut}${p.statut==="won"&&(p.montant??p.valeur)?" · "+fmt(p.montant??p.valeur):""}</span>`:""}</div>
+      <div class="note">${esc(p.prestation||"")}${p.source?" · "+esc(p.source):""}${eleveNames?" · <b>"+esc(eleveNames[p.eleve_id]||"")+"</b>":""} · reçu ${ageTxt(p.cree_le)}${p.nb_tentatives?` · ${p.nb_tentatives} appel${p.nb_tentatives>1?"s":""}${p.derniere_action?" (dernier "+ageTxt(p.derniere_action)+")":""}`:""}</div>
+      <div class="pcontact">${p.tel?`<a class="btn small" href="${telLink(p.tel)}">☎ ${esc(p.tel)}</a><a class="btn small" href="${waLink(p.tel)}" target="_blank" rel="noopener">WhatsApp</a>`:""}${p.email?`<span class="note">${esc(p.email)}</span>`:""}</div>
+      ${canAct&&p.statut==="open"?`<div class="pacts" style="margin-top:8px"><button class="btn small" data-called="${p.id}">✓ J'ai appelé</button><label class="note" style="display:inline-flex;align-items:center;gap:4px">Rappeler le <input type="date" data-rappel="${p.id}" value="${dateInput(p.rappel_le)}" style="width:auto;padding:3px 6px"></label></div>`:""}
+    </div>
+    <div class="pstage">${canAct?`<select data-stage="${p.id}" ${st.length?"":"disabled"}>${st.map(s=>`<option value="${s.id}" ${s.id===p.stage_id?"selected":""}>${esc(s.nom)}</option>`).join("")}${st.length?"":`<option>${esc(p.stage_nom||"—")}</option>`}</select>
+      <div class="pacts">${p.statut==="open"?`<button class="btn small primary" data-won="${p.id}">✓ Cliente</button><button class="btn small" data-lost="${p.id}">Perdue</button>`:`<button class="btn small" data-reopen="${p.id}">Rouvrir</button>`}</div>`:`<span class="pill m1">${esc(p.stage_nom||"—")}</span>`}
+      ${canAct?`<textarea class="pnote" data-note="${p.id}" placeholder="Ma note (ex. veut un devis cure 5 séances)">${esc(p.note_eleve||"")}</textarea>`:(p.note_eleve?`<div class="note">« ${esc(p.note_eleve)} »</div>`:"")}</div>
+  </div>`;
+}
+function prospectsHTML(list,stagesByPipe,opts){
+  if(!list.length) return `<div class="empty">${opts.filter?"Rien dans cette catégorie.":"Aucun prospect pour l'instant. Dès que les pubs tournent, ils apparaissent ici."}</div>`;
+  return `<div class="list">${list.map(p=>prospectCard(p,stagesByPipe[p.pipeline_id]||[],opts)).join("")}</div>`;
+}
+function wonModal(p,eleveId,onDone){
+  modal(`<h2>🎉 ${esc(p.nom||"Prospect")} devient cliente</h2><p class="note">Le montant est envoyé à GoHighLevel : c'est lui qui remonte la valeur d'achat à Facebook et améliore tes pubs.</p>
+    <div class="field"><label>Montant encaissé (€)</label><input id="wAmt" inputmode="decimal" value="${p.montant??p.valeur??""}" placeholder="ex. 350"></div>
+    <div class="actions"><button class="btn" id="cancel">Annuler</button><button class="btn primary" id="ok">Valider la vente</button></div>`);
+  $("#cancel").onclick=closeModal; $("#wAmt").focus();
+  $("#ok").onclick=async()=>{const m=num($("#wAmt").value);closeModal();try{await ghl({action:"stage",eleve_id:eleveId,opportunity_id:p.id,status:"won",montant:m});toast("Bravo, une cliente de plus 🎉");onDone()}catch(e){err(e)}};
+}
+function bindProspects(container,{eleveIdFor,onDone,byId}){
+  container.querySelectorAll("[data-stage]").forEach(s=>s.onchange=async()=>{s.disabled=true;try{await ghl({action:"stage",eleve_id:eleveIdFor(s.dataset.stage),opportunity_id:s.dataset.stage,stage_id:s.value});toast("Étape mise à jour, transmise à GoHighLevel");onDone()}catch(e){err(e);s.disabled=false}});
+  const setStatus=(id,status,msg)=>async()=>{try{await ghl({action:"stage",eleve_id:eleveIdFor(id),opportunity_id:id,status});toast(msg);onDone()}catch(e){err(e)}};
+  container.querySelectorAll("[data-won]").forEach(b=>b.onclick=()=>wonModal(byId[b.dataset.won]||{id:b.dataset.won},eleveIdFor(b.dataset.won),onDone));
+  container.querySelectorAll("[data-lost]").forEach(b=>b.onclick=setStatus(b.dataset.lost,"lost","Marquée perdue"));
+  container.querySelectorAll("[data-reopen]").forEach(b=>b.onclick=setStatus(b.dataset.reopen,"open","Prospect rouvert"));
+  container.querySelectorAll("[data-note]").forEach(t=>t.onchange=async()=>{const {error}=await sb.from("ir_prospects").update({note_eleve:t.value}).eq("id",t.dataset.note);if(error)return err(error);toast("Note enregistrée")});
+  container.querySelectorAll("[data-called]").forEach(b=>b.onclick=async()=>{const p=byId[b.dataset.called]||{};const {error}=await sb.from("ir_prospects").update({nb_tentatives:(p.nb_tentatives||0)+1,derniere_action:new Date().toISOString(),rappel_le:null}).eq("id",b.dataset.called);if(error)return err(error);toast("Appel noté");onDone()});
+  container.querySelectorAll("[data-rappel]").forEach(i=>i.onchange=async()=>{const v=i.value?new Date(i.value+"T09:00").toISOString():null;const {error}=await sb.from("ir_prospects").update({rappel_le:v}).eq("id",i.dataset.rappel);if(error)return err(error);toast(v?"Rappel programmé":"Rappel retiré");onDone()});
+}
+function crmFilterBar(list,current,id){ const counts={}; list.forEach(p=>{counts[cat(p)]=(counts[cat(p)]||0)+1}); counts.tous=list.length;
+  return `<div class="chips" id="${id}">${CATS.map(([k,l])=>`<button class="chip ${current===k?"on":""}" data-cat="${k}">${l}${counts[k]?` <b>${counts[k]}</b>`:""}</button>`).join("")}</div>`; }
+function crmFilter(list,k){ return k==="tous"?list:list.filter(p=>cat(p)===k); }
+function crmSort(list){ const order={rappel:0,nouveau:1,encours:2,cliente:3,perdue:4}; return [...list].sort((a,b)=>(order[cat(a)]-order[cat(b)])||(new Date(b.cree_le||0)-new Date(a.cree_le||0))); }
+
+
+
+// ================= DOCUMENTS & COACHING (commun) =================
+const DOC_CATS=["Admin","Image de marque","Stratégie","Marketing","Compte-rendus","Autre"];
+let DOC_TPL=null;
+async function docTemplate(){ if(DOC_TPL) return DOC_TPL; const {data}=await sb.from("ir_doc_template").select("*").order("position"); DOC_TPL=data||[]; return DOC_TPL; }
+function docsByCat(docs,tpl){ const out={}; DOC_CATS.forEach(c=>out[c]=[]);
+  tpl.forEach(t=>{const d=docs.find(x=>x.template_id===t.id)||docs.find(x=>!x.template_id&&x.titre.toLowerCase()===t.titre.toLowerCase()); (out[t.categorie]=out[t.categorie]||[]).push({tpl:t,doc:d||null});});
+  docs.filter(d=>!tpl.some(t=>d.template_id===t.id||(!d.template_id&&d.titre.toLowerCase()===t.titre.toLowerCase()))).forEach(d=>(out[d.categorie||"Autre"]=out[d.categorie||"Autre"]||[]).push({tpl:null,doc:d}));
+  return out; }
+function docsStats(docs,tpl){ const total=tpl.length, done=tpl.filter(t=>docs.some(d=>d.template_id===t.id||(!d.template_id&&d.titre.toLowerCase()===t.titre.toLowerCase()))).length; return {total,done,pct:total?Math.round(done/total*100):0}; }
+function coachingStats(rdv,quotaH){ const now=new Date(); const sess=(rdv||[]).filter(r=>r.coaching!==false); const used=sess.filter(r=>new Date(r.date_heure)<=now).reduce((s,r)=>s+(r.duree_min||60),0)/60; const planned=sess.filter(r=>new Date(r.date_heure)>now).reduce((s,r)=>s+(r.duree_min||60),0)/60; const q=num(quotaH)||6;
+  const perMonth={}; sess.forEach(r=>{const k=new Date(r.date_heure).toISOString().slice(0,7); perMonth[k]=(perMonth[k]||0)+(r.duree_min||60)/60;});
+  return {used,planned,quota:q,left:Math.max(0,q-used),pct:Math.min(100,Math.round(used/q*100)),perMonth}; }
+const hfr=h=>{const H=Math.floor(h),M=Math.round((h-H)*60);return M?`${H} h ${String(M).padStart(2,"0")}`:`${H} h`};
+function coachingHTML(st,{eleve=false}={}){
+  return `<div class="coachbox"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><b>${hfr(st.used)} utilisées sur ${hfr(st.quota)}</b><span class="note">${st.left?hfr(st.left)+" restantes":"quota atteint"}${st.planned?` · ${hfr(st.planned)} planifiées`:""}</span></div>
+    <div class="bar ${st.used>=st.quota?"ok":""}" style="margin:6px 0 4px"><i style="width:${st.pct}%"></i></div>
+    <div class="note">${eleve?"Tes séances de coaching avec Cindy, 2 h par mois sur 3 mois.":"2 h par mois conseillées. Les séances passées comptent automatiquement."}</div></div>`;
+}
+
+// ================= RÉSEAUX SOCIAUX : calendrier de contenu =================
+const CANAUX={instagram:"Instagram",facebook:"Facebook",tiktok:"TikTok"};
+const TYPES={post:"Post",reel:"Reel",carrousel:"Carrousel",story:"Story"};
+const PSTAT={idee:["Idée","termine"],a_faire:["À créer","pause"],pret:["Prêt","onboarding"],programme:["Programmé","m1"],publie:["Publié","continuation"]};
+const Social={
+  month:null,
+  async render(main,{eleveId,prenom,canConnect,eleveNames,adminSelect}){
+    const m=this.month||(()=>{const d=new Date();return new Date(d.getFullYear(),d.getMonth(),1)})(); this.month=m;
+    const from=new Date(m.getFullYear(),m.getMonth()-1,20), to=new Date(m.getFullYear(),m.getMonth()+1,10);
+    let q=sb.from("ir_posts").select("*").gte("date_prevue",from.toISOString().slice(0,10)).lte("date_prevue",to.toISOString().slice(0,10)).order("date_prevue"); if(eleveId) q=q.eq("eleve_id",eleveId);
+    const {data:posts}=await q; const list=posts||[]; const byDay={}; list.forEach(p=>(byDay[p.date_prevue]=byDay[p.date_prevue]||[]).push(p));
+    const first=new Date(m.getFullYear(),m.getMonth(),1), start=(first.getDay()+6)%7, days=new Date(m.getFullYear(),m.getMonth()+1,0).getDate();
+    const todayS=new Date().toISOString().slice(0,10); const monthName=m.toLocaleDateString("fr-FR",{month:"long",year:"numeric"});
+    const inMonth=list.filter(p=>p.date_prevue.startsWith(m.toISOString().slice(0,7))||p.date_prevue.startsWith(`${m.getFullYear()}-${String(m.getMonth()+1).padStart(2,"0")}`));
+    const done=inMonth.filter(p=>p.statut==="publie").length;
+    let cells=""; for(let i=0;i<start;i++)cells+=`<div class="day empty"></div>`;
+    for(let d=1;d<=days;d++){const ds=`${m.getFullYear()}-${String(m.getMonth()+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;const ps=byDay[ds]||[];
+      cells+=`<div class="day ${ds===todayS?"today":""}" data-day="${ds}"><div class="dn">${d}</div>${ps.map(p=>`<button class="post ${p.statut}" data-post="${p.id}" title="${esc(p.titre)}">${TYPES[p.type]?.[0]||"P"} · ${esc(p.titre||CANAUX[p.canal]||"")}</button>`).join("")}</div>`;}
+    main.innerHTML=`<div class="topbar"><div><h1>${eleveId&&!adminSelect?"Mes réseaux sociaux":"Réseaux sociaux"}</h1><p class="sub">${inMonth.length?`${inMonth.length} contenu${inMonth.length>1?"s":""} prévu${inMonth.length>1?"s":""} ce mois · ${done} publié${done>1?"s":""}`:"Planifie tes contenus : 2 posts par semaine, c'est le rythme qui fait grandir une communauté."}</p></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">${adminSelect||""}${canConnect?`<button class="btn" id="connectIG" title="Disponible dès que la publication via GoHighLevel est activée">Connecter Instagram / Facebook <span class="pill cindy">bientôt</span></button>`:""}<button class="btn primary" id="newPost">+ Contenu</button></div></div>
+    <div class="two" style="grid-template-columns:2fr 1fr">
+      <div class="card"><div class="calhead"><button class="btn small" id="prevM">‹</button><h2 style="margin:0;text-transform:capitalize">${monthName}</h2><button class="btn small" id="nextM">›</button></div>
+        <div class="cal"><div class="wd">Lun</div><div class="wd">Mar</div><div class="wd">Mer</div><div class="wd">Jeu</div><div class="wd">Ven</div><div class="wd">Sam</div><div class="wd">Dim</div>${cells}</div>
+        <div class="legend">${Object.entries(PSTAT).map(([k,v])=>`<span><i class="sw ${k}"></i>${v[0]}</span>`).join("")}</div></div>
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="card"><h2>À faire cette semaine</h2>${(()=>{const now=startOfDay(new Date()),end=new Date(now.getTime()+7*864e5);const w=list.filter(p=>p.statut!=="publie"&&new Date(p.date_prevue)>=now&&new Date(p.date_prevue)<end);return w.length?w.map(p=>`<div class="item"><div><div class="t">${esc(p.titre||TYPES[p.type]||"Contenu")}</div><div class="s">${dfr(p.date_prevue)} · ${CANAUX[p.canal]||p.canal} · ${TYPES[p.type]||p.type}${eleveNames?" · "+esc(eleveNames[p.eleve_id]||""):""}</div></div><span class="pill ${PSTAT[p.statut]?.[1]}">${PSTAT[p.statut]?.[0]}</span></div>`).join(""):`<div class="note">Rien de prévu sur 7 jours. Ajoute un contenu ou génère une semaine type.</div>`})()}</div>
+        <div class="card"><h2>Idées rapides</h2><div class="note" style="margin-bottom:8px">Issu de la méthode Réseaux Rentables. Clique pour ajouter en brouillon.</div><div class="list" style="gap:4px">${["Avant / après d'une cliente (avec son accord)","Coulisses : ton rituel d'ouverture","3 idées reçues sur ta prestation phare","Témoignage client en story à la une","Offre du mois : rappel clair + lien de RDV","Toi face caméra : pourquoi ce métier"].map(i=>`<button class="btn small" style="justify-content:flex-start;text-align:left" data-idea="${esc(i)}">💡 ${esc(i)}</button>`).join("")}</div></div>
+      </div></div>`;
+    $("#prevM").onclick=()=>{this.month=new Date(m.getFullYear(),m.getMonth()-1,1);this.render(main,{eleveId,prenom,canConnect,eleveNames,adminSelect})};
+    $("#nextM").onclick=()=>{this.month=new Date(m.getFullYear(),m.getMonth()+1,1);this.render(main,{eleveId,prenom,canConnect,eleveNames,adminSelect})};
+    const reload=()=>this.render(main,{eleveId,prenom,canConnect,eleveNames,adminSelect});
+    $("#newPost").onclick=()=>this.edit(null,{eleveId,date:todayS},reload);
+    const ci=$("#connectIG"); if(ci) ci.onclick=()=>toast("La connexion Instagram/Facebook arrive avec la publication automatique.");
+    main.querySelectorAll("[data-post]").forEach(b=>b.onclick=ev=>{ev.stopPropagation();this.edit(list.find(p=>p.id===b.dataset.post),{eleveId},reload)});
+    main.querySelectorAll("[data-day]").forEach(d=>d.onclick=()=>this.edit(null,{eleveId,date:d.dataset.day},reload));
+    main.querySelectorAll("[data-idea]").forEach(b=>b.onclick=async()=>{const {error}=await sb.from("ir_posts").insert({eleve_id:eleveId,date_prevue:todayS,titre:b.dataset.idea,statut:"idee",canal:"instagram",type:"post"});if(error)return err(error);toast("Idée ajoutée au calendrier");reload()});
+  },
+  edit(p,{eleveId,date},onDone){
+    const isNew=!p; p=p||{date_prevue:date,canal:"instagram",type:"post",statut:"a_faire",heure:"",titre:"",legende:"",visuel_url:""};
+    modal(`<h2>${isNew?"Nouveau contenu":"Contenu"}</h2><div class="form">
+      <div class="field"><label>Date</label><input id="p-date" type="date" value="${p.date_prevue}"></div><div class="field"><label>Heure</label><input id="p-heure" value="${esc(p.heure||"")}" placeholder="18:00"></div>
+      <div class="field"><label>Réseau</label><select id="p-canal">${Object.entries(CANAUX).map(([k,v])=>`<option value="${k}" ${p.canal===k?"selected":""}>${v}</option>`).join("")}</select></div>
+      <div class="field"><label>Format</label><select id="p-type">${Object.entries(TYPES).map(([k,v])=>`<option value="${k}" ${p.type===k?"selected":""}>${v}</option>`).join("")}</select></div>
+      <div class="field wide"><label>Titre / idée</label><input id="p-titre" value="${esc(p.titre||"")}" placeholder="ex. Avant/après Hydralift"></div>
+      <div class="field wide"><label>Légende</label><textarea id="p-leg" style="min-height:110px" placeholder="Accroche en première ligne, puis le message, puis l'appel à l'action.">${esc(p.legende||"")}</textarea></div>
+      <div class="field wide"><label>Lien du visuel (Canva, Drive…)</label><input id="p-vis" type="url" value="${esc(p.visuel_url||"")}"></div>
+      <div class="field wide"><label>Statut</label><select id="p-stat">${Object.entries(PSTAT).map(([k,v])=>`<option value="${k}" ${p.statut===k?"selected":""}>${v[0]}</option>`).join("")}</select></div></div>
+      <div class="actions">${isNew?"":`<button class="btn danger" id="del">Supprimer</button>`}<button class="btn" id="cancel">Annuler</button><button class="btn primary" id="ok">${isNew?"Ajouter":"Enregistrer"}</button></div>`);
+    $("#cancel").onclick=closeModal;
+    $("#ok").onclick=async()=>{const g=id=>$("#"+id).value;const d={eleve_id:p.eleve_id||eleveId,date_prevue:g("p-date"),heure:g("p-heure").trim(),canal:g("p-canal"),type:g("p-type"),titre:g("p-titre").trim(),legende:g("p-leg"),visuel_url:g("p-vis").trim(),statut:g("p-stat")};
+      if(!d.date_prevue)return toast("Choisis une date"); if(!d.eleve_id)return toast("Choisis une élève");
+      const {error}=isNew?await sb.from("ir_posts").insert(d):await sb.from("ir_posts").update(d).eq("id",p.id); if(error)return err(error); closeModal(); toast(isNew?"Contenu ajouté":"Enregistré"); onDone();};
+    const del=$("#del"); if(del) del.onclick=async()=>{await sb.from("ir_posts").delete().eq("id",p.id);closeModal();toast("Supprimé");onDone()};
+  }
+};
+
+// ================= FORMATION (structure, contenu à venir) =================
+const Formation={
+  modules:[
+    {t:"Ma marque en 15 étapes",d:"Identité, Instagram, programmation — la base pour être reconnue.",n:15},
+    {t:"Réseaux Rentables",d:"9 modules pour faire grandir ta communauté et vendre avec Instagram + l'IA.",n:9},
+    {t:"Formation Dermo-esthétique",d:"Laser · Soin du visage · Maquillage permanent : protocoles, vente, consentements.",n:3}
+  ],
+  render(main,{prenom,admin}){
+    main.innerHTML=`<div class="topbar"><div><h1>${admin?"Formation":"Ma formation"}</h1><p class="sub">${admin?"Les modules seront gérés ici (vidéos, leçons, quiz) et la progression de chaque élève remontera sur sa fiche.":"Tes modules, à ton rythme. Les vidéos arrivent ici très bientôt."}</p></div>${admin?`<button class="btn primary" disabled>+ Module <span class="pill cindy">bientôt</span></button>`:""}</div>
+    <div class="list">${this.modules.map((m,i)=>`<div class="row" style="grid-template-columns:1fr auto auto;cursor:default"><div><div class="name">${esc(m.t)}</div><div class="inst">${esc(m.d)}</div></div><div class="note">${m.n} leçons</div><div><div class="bar" style="width:120px"><i style="width:0%"></i></div><div class="pct">0 %</div></div></div>`).join("")}</div>
+    <div class="empty" style="margin-top:14px">${admin?"Prochaine étape : migrer les vidéos depuis Systeme.io et activer les leçons.":"Tant que les vidéos ne sont pas en ligne ici, tu les retrouves à l'endroit habituel. Cindy te prévient dès que c'est migré."}</div>`;
+  }
+};
+
+// ================= ADMIN =================
+const Admin={
+  view:"dash", current:null, eleves:[], tpl:[],
+  async start(){ await this.load(); this.shell(); this.render(); },
+  async load(){
+    const [{data:e},{data:t}]=await Promise.all([sb.from("ir_eleves").select("*").order("created_at",{ascending:false}),sb.from("ir_checklist_template").select("*").order("position")]);
+    this.eleves=e||[]; this.tpl=t||[];
+    const {data:c}=await sb.from("ir_checklist").select("eleve_id,done,cote");
+    this.prog={}; (c||[]).forEach(r=>{const p=this.prog[r.eleve_id]=this.prog[r.eleve_id]||{done:0,total:0};p.total++;if(r.done)p.done++});
+    const {data:s}=await sb.from("ir_suivi").select("*"); this.suivi={}; (s||[]).forEach(r=>{(this.suivi[r.eleve_id]=this.suivi[r.eleve_id]||{})[r.mois]=r});
+    const {data:m}=await sb.from("ir_messages").select("eleve_id").eq("auteur","eleve").eq("lu",false); this.unread={}; (m||[]).forEach(r=>this.unread[r.eleve_id]=(this.unread[r.eleve_id]||0)+1);
+  },
+  shell(){
+    root.innerHTML=`<div class="app"><aside class="rail"><div class="brand">Institut Rentable<small>Espace coach</small></div>
+      <button class="nav" data-view="dash">Tableau de bord</button><button class="nav" data-view="eleves">Élèves <span class="badge" id="ubadge" hidden></span></button><button class="nav" data-view="prospects">Prospects</button><button class="nav" data-view="inbox">Messages <span class="badge" id="ibadge" hidden></span></button><button class="nav" data-view="reseaux">Réseaux sociaux</button><button class="nav" data-view="formation">Formation</button><button class="nav" data-view="tpl">Modèle d'onboarding</button><button class="nav" data-view="reglages">Réglages</button>
+      <div class="foot"><span>${esc(session.user.email)}</span><button class="btn small" id="out">Se déconnecter</button></div></aside><main class="main" id="main"></main></div>`;
+    root.querySelectorAll(".nav").forEach(b=>b.onclick=()=>{this.view=b.dataset.view;this.current=null;this.render()});
+    $("#out").onclick=logout;
+  },
+  pct(id){const p=this.prog[id]||{done:0,total:0};return {...p,pct:p.total?Math.round(p.done/p.total*100):0}},
+  lastCA(e){const s=this.suivi[e.id]||{};for(const m of [3,2,1]){if(s[m]?.ca!=null)return s[m].ca}return e.ca_depart},
+  render(){
+    root.querySelectorAll(".nav").forEach(b=>b.classList.toggle("active",b.dataset.view===this.view));
+    const tot=Object.values(this.unread).reduce((a,b)=>a+b,0); const ub=$("#ubadge"); if(ub){ub.hidden=!tot;ub.textContent=tot} const ib=$("#ibadge"); if(ib){ib.hidden=!tot;ib.textContent=tot}
+    if(this.view==="dash") this.dash(); else if(this.view==="eleves") this.current?this.detail():this.list(); else if(this.view==="prospects") this.prospects(); else if(this.view==="inbox") this.inbox(); else if(this.view==="reseaux") this.reseaux(); else if(this.view==="formation") Formation.render($("#main"),{admin:true}); else if(this.view==="reglages") this.reglages(); else this.template();
+  },
+  rowHTML(e){const p=this.pct(e.id),ca=this.lastCA(e),un=this.unread[e.id];
+    return `<div class="row" data-id="${e.id}"><div><div class="name">${esc(e.prenom)} ${esc(e.nom||"")} ${un?`<span class="badge pill" style="background:var(--accent);color:var(--accent-fg)">${un} msg</span>`:""}</div><div class="inst">${esc(e.institut||"")}${e.ville?" · "+esc(e.ville):""}${e.email?"":" · <em>pas d'email</em>"}</div></div>
+    <div><span class="pill ${e.statut}">${statLabel(e.statut)}</span></div>
+    <div class="hide-m"><div class="bar ${p.pct===100?"ok":""}"><i style="width:${p.pct}%"></i></div><div class="pct">Onboarding ${p.done}/${p.total}</div></div>
+    <div class="hide-m" style="font-variant-numeric:tabular-nums"><b>${fmt(ca)}</b><div class="note">objectif ${fmt(e.objectif_ca)}</div></div><div class="chev">›</div></div>`},
+  bindRows(){$("#main").querySelectorAll(".row").forEach(r=>r.onclick=()=>{this.current=r.dataset.id;this.view="eleves";this.render()}); const a=$("#add"); if(a)a.onclick=()=>this.openForm();},
+  dash(){
+    const act=this.eleves.filter(e=>e.statut!=="termine");
+    const caTot=act.reduce((s,e)=>s+(num(this.lastCA(e))||0),0), objTot=act.reduce((s,e)=>s+(num(e.objectif_ca)||0),0);
+    const onb=act.length?Math.round(act.reduce((s,e)=>s+this.pct(e.id).pct,0)/act.length):0;
+    $("#main").innerHTML=`<div class="topbar"><div><h1>Tableau de bord</h1><p class="sub">${this.eleves.length} élèves · ${act.length} en cours</p></div><button class="btn primary" id="add">+ Nouvelle élève</button></div>
+    <div class="tiles"><div class="tile"><div class="k">Élèves en cours</div><div class="v">${act.length}</div><div class="d">${act.filter(e=>e.statut==="onboarding").length} en onboarding</div></div>
+    <div class="tile"><div class="k">CA mensuel cumulé</div><div class="v">${fmt(caTot)}</div><div class="d">dernier mois renseigné</div></div>
+    <div class="tile"><div class="k">Objectif cumulé</div><div class="v">${fmt(objTot)}</div><div class="d">${objTot?Math.round(caTot/objTot*100)+" % atteint":"objectifs à définir"}</div></div>
+    <div class="tile"><div class="k">Onboarding moyen</div><div class="v">${onb} %</div><div class="d">checklist validée</div></div></div>
+    <h3>Élèves</h3>${this.eleves.length?`<div class="list">${this.eleves.map(e=>this.rowHTML(e)).join("")}</div>`:`<div class="empty">Aucune élève. Ajoute la première avec le bouton en haut.</div>`}`;
+    this.bindRows();
+  },
+  list(){ $("#main").innerHTML=`<div class="topbar"><div><h1>Élèves</h1></div><button class="btn primary" id="add">+ Nouvelle élève</button></div><div class="list">${[...this.eleves].sort((a,b)=>a.prenom.localeCompare(b.prenom)).map(e=>this.rowHTML(e)).join("")}</div>`; this.bindRows(); },
+  async detail(){
+    const e=this.eleves.find(x=>x.id===this.current); if(!e){this.current=null;return this.list()}
+    const tplDocs=await docTemplate();
+    const [{data:cl},{data:docs},{data:rdv},{data:msgs}]=await Promise.all([
+      sb.from("ir_checklist").select("*").eq("eleve_id",e.id).order("position"),
+      sb.from("ir_documents").select("*").eq("eleve_id",e.id).order("created_at"),
+      sb.from("ir_rdv").select("*").eq("eleve_id",e.id).order("date_heure"),
+      sb.from("ir_messages").select("*").eq("eleve_id",e.id).order("created_at")]);
+    const s=this.suivi[e.id]||{}; const groups={}; (cl||[]).forEach(i=>(groups[i.groupe]=groups[i.groupe]||[]).push(i));
+    const done=(cl||[]).filter(i=>i.done).length, total=(cl||[]).length, pct=total?Math.round(done/total*100):0;
+    const obj=num(e.objectif_ca), bars=[["Départ",num(e.ca_depart)],...MOIS.map(m=>[m[1],num(s[m[0]]?.ca)])], max=Math.max(obj||0,...bars.map(b=>b[1]||0),1), last=num(this.lastCA(e));
+    $("#main").innerHTML=`<div class="topbar"><button class="btn small" id="back">‹ Toutes les élèves</button><div style="display:flex;gap:8px"><button class="btn small" id="preview">👁 Voir son espace</button><button class="btn small" id="edit">Modifier la fiche</button></div></div>
+    <div class="dhead"><div><h1>${esc(e.prenom)} ${esc(e.nom||"")}</h1>
+      <div class="meta"><span>${esc(e.institut||"")}${e.ville?" · "+esc(e.ville):""}</span>${e.instagram?`<span>· ${esc(e.instagram)}</span>`:""}${e.metier?`<span>· ${esc(e.metier)}</span>`:""}${e.ton?`<span>· ${esc(e.ton)}</span>`:""}</div>
+      <div class="meta"><span>${esc(e.offre||"Offre à préciser")}</span>${e.date_debut?`<span>· début le ${dfr(e.date_debut)}</span>`:""}<span>· ${e.email?esc(e.email):"<b style='color:var(--warn)'>aucun email : elle ne peut pas se connecter</b>"}</span></div></div>
+      <div><label class="note" for="statut">Statut</label><br><select id="statut" style="width:auto">${STATUTS.map(x=>`<option value="${x[0]}" ${e.statut===x[0]?"selected":""}>${x[1]}</option>`).join("")}</select></div></div>
+    <div class="detail">
+      <div class="card"><h2>Onboarding</h2><div class="bar ${pct===100?"ok":""}"><i style="width:${pct}%"></i></div><div class="pct" style="margin-bottom:12px">${done} / ${total} validés · ${pct} %</div>
+        ${Object.entries(groups).map(([g,its])=>`<div class="group"><h3>${esc(g)}</h3>${its.map(i=>`<div class="check ${i.done?"done":""}"><input type="checkbox" id="c-${i.id}" data-ck="${i.id}" ${i.done?"checked":""}><label for="c-${i.id}">${esc(i.label)} ${i.cote==="eleve"?`<span class="pill eleve">élève</span>`:""}</label>${i.done?`<span class="when">${dfr(i.done_at)}${i.done_by==="eleve"?" · par elle":""}</span>`:""}<button class="rm" data-rmck="${i.id}" title="Retirer">×</button></div>`).join("")}</div>`).join("")}
+        <div class="addline"><input id="extra" placeholder="Ajouter une étape pour elle…"><select id="extraCote" style="flex:0 0 120px"><option value="cindy">côté Cindy</option><option value="eleve">côté élève</option></select><button class="btn small" id="addExtra">Ajouter</button></div></div>
+      <div class="card"><h2>Évolution sur 3 mois</h2>
+        <div class="chart">${obj?`<div class="goal" style="bottom:${Math.min(obj/max*130,130)}px">objectif ${fmt(obj)}</div>`:""}${bars.map(([l,v])=>`<div class="col ${obj&&v!=null&&v>=obj?"hit":""}"><em>${v!=null?fmt(v):"—"}</em><i style="height:${v?Math.max(v/max*130,3):3}px"></i><span>${l}</span></div>`).join("")}</div>
+        <p class="gap">${obj&&last!=null?(last>=obj?`Objectif atteint, <b>+${fmt(last-obj)}</b> au-dessus.`:`Il manque <b>${fmt(obj-last)}</b> pour atteindre ${fmt(obj)}.`):"Renseigne l'objectif et le CA de départ pour suivre l'écart."}</p>
+        <div class="months">${MOIS.map(m=>{const r=s[m[0]]||{};return `<div class="month"><div class="mh"><b>${m[1]}</b><span>${m[2]}</span></div><div class="fields">
+          <div class="field"><label>CA réalisé</label><input inputmode="decimal" data-m="${m[0]}" data-f="ca" value="${r.ca??""}" placeholder="€"></div>
+          <div class="field"><label>Objectif du mois</label><input inputmode="decimal" data-m="${m[0]}" data-f="objectif" value="${r.objectif??""}" placeholder="${obj||"€"}"></div>
+          <div class="field"><label>Prospects</label><input inputmode="numeric" data-m="${m[0]}" data-f="leads" value="${r.leads??""}"></div>
+          <div class="field"><label>RDV pris</label><input inputmode="numeric" data-m="${m[0]}" data-f="rdv" value="${r.rdv??""}"></div>
+          <div class="field"><label>Budget pub</label><input inputmode="decimal" data-m="${m[0]}" data-f="budget_pub" value="${r.budget_pub??""}" placeholder="€"></div>
+          <div class="field wide"><label>Points clés (privé)</label><textarea data-m="${m[0]}" data-f="notes">${esc(r.notes||"")}</textarea></div>
+          ${r.note_eleve?`<div class="field wide"><label>Son commentaire</label><div class="note" style="color:var(--fg)">${esc(r.note_eleve)}</div></div>`:""}</div>
+          <div class="coach"><input type="checkbox" id="co-${m[0]}" data-m="${m[0]}" data-f="coaching" ${r.coaching?"checked":""}><label for="co-${m[0]}">Coaching 1h fait${r.coaching_date?" · "+dfr(r.coaching_date):""}</label></div></div>`}).join("")}</div></div>
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="card"><h2>Messages</h2><div class="thread" id="thread">${(msgs||[]).length?msgs.map(m=>`<div class="msg ${m.auteur==="cindy"?"me":""}">${esc(m.contenu)}<span class="s">${m.auteur==="cindy"?"Cindy":e.prenom} · ${dtfr(m.created_at)}</span></div>`).join(""):`<div class="note">Aucun message pour l'instant.</div>`}</div>
+          <div class="compose"><textarea id="msgIn" placeholder="Écrire à ${esc(e.prenom)}…"></textarea><button class="btn primary" id="msgSend">Envoyer</button></div></div>
+        <div class="card"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><h2>Documents</h2><span class="note">${docsStats(docs||[],tplDocs).done} / ${docsStats(docs||[],tplDocs).total} livrés</span></div>
+          ${Object.entries(docsByCat(docs||[],tplDocs)).filter(([c,items])=>items.length).map(([c,items])=>`<h3 style="margin-top:10px">${esc(c)}</h3>${items.map(({tpl,doc})=>doc?`<div class="item"><div style="min-width:0"><div class="t"><a href="${esc(doc.url)}" target="_blank" rel="noopener">${esc(doc.titre)}</a></div><div class="s">livré le ${dfr(doc.created_at)}</div></div><button class="rm" data-rmdoc="${doc.id}" title="Retirer">×</button></div>`
+            :`<div class="item todo"><div style="min-width:0"><div class="t" style="color:var(--muted)">${esc(tpl.titre)}</div><div class="s">à livrer</div></div><button class="btn small" data-deliver="${tpl.id}" data-cat="${esc(tpl.categorie)}" data-title="${esc(tpl.titre)}">+ Lien</button></div>`).join("")}`).join("")}
+          <div class="addline" style="flex-direction:column;margin-top:12px"><input id="docT" placeholder="Autre document : titre"><input id="docU" type="url" placeholder="Lien Canva / Drive / PDF"><div style="display:flex;gap:6px"><select id="docCat" style="flex:1">${DOC_CATS.map(c=>`<option>${c}</option>`).join("")}</select><button class="btn small" id="docAdd">Ajouter</button></div></div></div>
+        <div class="card"><h2>Coaching & rendez-vous</h2>
+          ${coachingHTML(coachingStats(rdv||[],e.quota_coaching_h))}
+          <div class="field" style="margin:10px 0"><label>Quota d'heures de coaching</label><input inputmode="decimal" data-root="quota_coaching_h" value="${e.quota_coaching_h??6}" style="width:90px"></div>
+          ${(rdv||[]).map(r=>`<div class="item"><div style="min-width:0"><div class="t">${esc(r.titre)} <span class="note">· ${r.duree_min||60} min${r.coaching===false?" · hors quota":""}</span></div><div class="s">${dtfr(r.date_heure)}${r.lien?` · <a href="${esc(r.lien)}" target="_blank" rel="noopener">lien</a>`:""}${r.compte_rendu?` · <span title="${esc(r.compte_rendu)}">compte-rendu ✓</span>`:""}</div></div><div style="display:flex;gap:4px"><button class="btn small" data-cr="${r.id}">CR</button><button class="rm" data-rmrdv="${r.id}">×</button></div></div>`).join("")||`<div class="note">Aucune séance planifiée.</div>`}
+          <div class="addline" style="flex-direction:column"><input id="rdvT" value="Coaching avec Cindy"><div style="display:flex;gap:6px"><input id="rdvD" type="datetime-local" style="flex:1"><select id="rdvDur" style="width:auto"><option value="30">30 min</option><option value="60" selected>1 h</option><option value="90">1 h 30</option><option value="120">2 h</option></select></div><input id="rdvL" type="url" placeholder="Lien visio (optionnel)"><label class="note" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="rdvCo" checked style="width:16px;height:16px"> compte dans le quota de coaching</label><button class="btn small" id="rdvAdd">Ajouter</button></div></div>
+        <div class="card"><h2>Infos</h2><div class="fields" style="grid-template-columns:1fr 1fr">
+          <div class="field"><label>CA de départ / mois</label><input inputmode="decimal" data-root="ca_depart" value="${e.ca_depart??""}" placeholder="€"></div>
+          <div class="field"><label>Objectif CA / mois</label><input inputmode="decimal" data-root="objectif_ca" value="${e.objectif_ca??""}" placeholder="€"></div>
+          <div class="field wide"><label>Blocage principal au départ</label><input data-root="blocage" value="${esc(e.blocage||"")}"></div>
+          <div class="field wide"><label>Règles & interdits (pub, mentions)</label><textarea data-root="regles">${esc(e.regles||"")}</textarea></div>
+          <div class="field wide"><label>Notes privées</label><textarea data-root="notes" style="min-height:100px">${esc(e.notes||"")}</textarea></div>
+          <div class="field wide"><label>Téléphone</label><input data-root="tel" value="${esc(e.tel||"")}"></div></div>
+          <div class="actions"><button class="btn small danger" id="del">Supprimer cette élève</button></div></div>
+      </div></div>`;
+    const main=$("#main"); const th=$("#thread"); th.scrollTop=th.scrollHeight;
+    if(this.unread[e.id]){ await sb.from("ir_messages").update({lu:true}).eq("eleve_id",e.id).eq("auteur","eleve").eq("lu",false); delete this.unread[e.id]; const ub=$("#ubadge"); const tot=Object.values(this.unread).reduce((a,b)=>a+b,0); ub.hidden=!tot; ub.textContent=tot; }
+    const upd=async(table,match,patch,msg)=>{const {error}=await sb.from(table).update(patch).match(match); if(error)return err(error); if(msg)toast(msg)};
+    $("#back").onclick=()=>{this.current=null;this.render()};
+    $("#edit").onclick=()=>this.openForm(e);
+    $("#preview").onclick=()=>Admin.previewAs(e);
+    $("#statut").onchange=async ev=>{await upd("ir_eleves",{id:e.id},{statut:ev.target.value},"Statut mis à jour");e.statut=ev.target.value};
+    main.querySelectorAll("[data-ck]").forEach(c=>c.onchange=async()=>{await upd("ir_checklist",{id:c.dataset.ck},{done:c.checked,done_at:c.checked?new Date().toISOString():null,done_by:c.checked?"cindy":null});await this.refreshDetail()});
+    main.querySelectorAll("[data-rmck]").forEach(b=>b.onclick=async()=>{await sb.from("ir_checklist").delete().eq("id",b.dataset.rmck);await this.refreshDetail()});
+    const addExtra=async()=>{const v=$("#extra").value.trim();if(!v)return;const {error}=await sb.from("ir_checklist").insert({eleve_id:e.id,groupe:"Spécifique à "+e.prenom,label:v,cote:$("#extraCote").value,position:9999});if(error)return err(error);toast("Étape ajoutée");await this.refreshDetail()};
+    $("#addExtra").onclick=addExtra;$("#extra").onkeydown=ev=>{if(ev.key==="Enter")addExtra()};
+    main.querySelectorAll("[data-m]").forEach(inp=>inp.onchange=async()=>{const f=inp.dataset.f,m=+inp.dataset.m;let patch;
+      if(f==="coaching")patch={coaching:inp.checked,coaching_date:inp.checked?new Date().toISOString().slice(0,10):null};
+      else patch={[f]:f==="notes"?inp.value:num(inp.value)};
+      await upd("ir_suivi",{eleve_id:e.id,mois:m},patch,"Enregistré"); (this.suivi[e.id]=this.suivi[e.id]||{})[m]={...(this.suivi[e.id]?.[m]||{}),...patch}; if(f==="ca")this.refreshDetail();});
+    main.querySelectorAll("[data-root]").forEach(inp=>inp.onchange=async()=>{const k=inp.dataset.root;const v=["ca_depart","objectif_ca","quota_coaching_h"].includes(k)?num(inp.value):inp.value;await upd("ir_eleves",{id:e.id},{[k]:v},"Enregistré");e[k]=v;if(!["notes","regles","blocage","tel"].includes(k))this.refreshDetail()});
+    $("#msgSend").onclick=async()=>{const v=$("#msgIn").value.trim();if(!v)return;const {error}=await sb.from("ir_messages").insert({eleve_id:e.id,auteur:"cindy",contenu:v});if(error)return err(error);await this.refreshDetail()};
+    $("#docAdd").onclick=async()=>{const t=$("#docT").value.trim(),u=$("#docU").value.trim();if(!t||!u)return toast("Titre et lien obligatoires");const {error}=await sb.from("ir_documents").insert({eleve_id:e.id,titre:t,url:u,categorie:$("#docCat").value,type:$("#docCat").value});if(error)return err(error);toast("Document ajouté");await this.refreshDetail()};
+    main.querySelectorAll("[data-deliver]").forEach(b=>b.onclick=()=>{modal(`<h2>${esc(b.dataset.title)}</h2><div class="field"><label>Lien (Canva, Drive, PDF…)</label><input id="dlU" type="url" placeholder="https://"></div><div class="actions"><button class="btn" id="cancel">Annuler</button><button class="btn primary" id="ok">Marquer livré</button></div>`);$("#cancel").onclick=closeModal;$("#dlU").focus();
+      $("#ok").onclick=async()=>{const u=$("#dlU").value.trim();if(!u)return toast("Colle le lien");const {error}=await sb.from("ir_documents").insert({eleve_id:e.id,titre:b.dataset.title,url:u,categorie:b.dataset.cat,type:b.dataset.cat,template_id:+b.dataset.deliver});if(error)return err(error);closeModal();toast("Document livré");await this.refreshDetail()}});
+    main.querySelectorAll("[data-cr]").forEach(b=>b.onclick=()=>{const r=(rdv||[]).find(x=>x.id===b.dataset.cr);modal(`<h2>Compte-rendu · ${esc(r.titre)}</h2><p class="note">${dtfr(r.date_heure)} · visible par l'élève dans ses rendez-vous.</p><div class="field"><textarea id="crT" style="min-height:160px" placeholder="Ce qu'on a vu, ce qu'elle doit faire d'ici la prochaine fois…">${esc(r.compte_rendu||"")}</textarea></div><div class="actions"><button class="btn" id="cancel">Annuler</button><button class="btn primary" id="ok">Enregistrer</button></div>`);$("#cancel").onclick=closeModal;
+      $("#ok").onclick=async()=>{const {error}=await sb.from("ir_rdv").update({compte_rendu:$("#crT").value}).eq("id",r.id);if(error)return err(error);closeModal();toast("Compte-rendu enregistré");await this.refreshDetail()}});
+    main.querySelectorAll("[data-rmdoc]").forEach(b=>b.onclick=async()=>{await sb.from("ir_documents").delete().eq("id",b.dataset.rmdoc);await this.refreshDetail()});
+    $("#rdvAdd").onclick=async()=>{const d=$("#rdvD").value;if(!d)return toast("Choisis une date");const {error}=await sb.from("ir_rdv").insert({eleve_id:e.id,titre:$("#rdvT").value.trim()||"Coaching avec Cindy",date_heure:new Date(d).toISOString(),lien:$("#rdvL").value.trim(),duree_min:+$("#rdvDur").value,coaching:$("#rdvCo").checked});if(error)return err(error);toast("Rendez-vous ajouté");await this.refreshDetail()};
+    main.querySelectorAll("[data-rmrdv]").forEach(b=>b.onclick=async()=>{await sb.from("ir_rdv").delete().eq("id",b.dataset.rmrdv);await this.refreshDetail()});
+    $("#del").onclick=()=>confirmBox(`Supprimer la fiche de ${esc(e.prenom)} ? Tout (checklist, suivi, messages, documents) sera effacé.`,async()=>{const {error}=await sb.from("ir_eleves").delete().eq("id",e.id);if(error)return err(error);toast("Élève supprimée");this.current=null;await this.load();this.render()});
+  },
+  async refreshDetail(){ const a=document.activeElement; if(a&&(a.tagName==="TEXTAREA"||(a.tagName==="INPUT"&&!["checkbox"].includes(a.type)))) return; await this.load(); this.render(); },
+  openForm(e){
+    const isNew=!e; e=e||{statut:"onboarding",date_debut:new Date().toISOString().slice(0,10),ton:"tutoiement"};
+    modal(`<h2>${isNew?"Nouvelle élève":"Modifier la fiche"}</h2><div class="form">
+      <div class="field"><label>Prénom *</label><input id="f-prenom" value="${esc(e.prenom||"")}"></div><div class="field"><label>Nom</label><input id="f-nom" value="${esc(e.nom||"")}"></div>
+      <div class="field wide"><label>Email (c'est son identifiant de connexion)</label><input id="f-email" type="email" value="${esc(e.email||"")}"></div>
+      <div class="field"><label>Institut / centre</label><input id="f-institut" value="${esc(e.institut||"")}"></div><div class="field"><label>Ville</label><input id="f-ville" value="${esc(e.ville||"")}"></div>
+      <div class="field"><label>Activité</label><input id="f-metier" value="${esc(e.metier||"")}"></div><div class="field"><label>Instagram</label><input id="f-insta" value="${esc(e.instagram||"")}" placeholder="@compte"></div>
+      <div class="field wide"><label>Offre</label><select id="f-offre">${OFFRES.map(o=>`<option ${e.offre===o?"selected":""}>${o}</option>`).join("")}</select></div>
+      <div class="field wide"><label>Identifiant du sous-compte GoHighLevel (Location ID)</label><input id="f-ghl" value="${esc(e.ghl_location_id||"")}" placeholder="ex. ve9EPM428h8vShlRW1KT"><div class="note">Dans GHL : Settings → Business Profile du sous-compte. C'est ce qui relie ses prospects à son espace.</div></div>
+      <div class="field"><label>Date de début</label><input id="f-debut" type="date" value="${e.date_debut||""}"></div>
+      <div class="field"><label>Ton des contenus</label><select id="f-ton"><option ${e.ton==="tutoiement"?"selected":""}>tutoiement</option><option ${e.ton==="vouvoiement"?"selected":""}>vouvoiement</option></select></div>
+      <div class="field"><label>CA de départ / mois (€)</label><input id="f-cadep" inputmode="decimal" value="${e.ca_depart??""}"></div><div class="field"><label>Objectif CA / mois (€)</label><input id="f-obj" inputmode="decimal" value="${e.objectif_ca??""}"></div>
+      </div><div class="actions"><button class="btn" id="cancel">Annuler</button><button class="btn primary" id="ok">${isNew?"Créer la fiche":"Enregistrer"}</button></div>`);
+    $("#cancel").onclick=closeModal;
+    $("#ok").onclick=async()=>{const g=id=>$("#"+id).value.trim();const d={prenom:g("f-prenom"),nom:g("f-nom"),email:g("f-email").toLowerCase()||null,institut:g("f-institut"),ville:g("f-ville"),metier:g("f-metier"),instagram:g("f-insta"),offre:g("f-offre"),date_debut:g("f-debut")||null,ghl_location_id:g("f-ghl"),ton:g("f-ton"),ca_depart:num(g("f-cadep")),objectif_ca:num(g("f-obj"))};
+      if(!d.prenom)return toast("Le prénom est obligatoire");
+      const q=isNew?sb.from("ir_eleves").insert(d).select().single():sb.from("ir_eleves").update(d).eq("id",e.id).select().single();
+      const {data,error}=await q; if(error)return err(error); closeModal(); toast(isNew?"Élève ajoutée":"Fiche mise à jour"); this.current=data.id; this.view="eleves"; await this.load(); this.render();};
+    $("#f-prenom").focus();
+  },
+  async previewAs(e){
+    me={...e}; Eleve.preview=true; Eleve.view="home"; Eleve.shell();
+    const bar=document.createElement("div"); bar.className="previewbar"; bar.innerHTML=`<span>Aperçu : tu vois l'espace de <b>${esc(e.prenom)}</b> exactement comme elle. Tes actions ici sont réelles.</span><button class="btn small" id="exitPreview">Revenir à l'espace coach</button>`;
+    document.body.prepend(bar); $("#exitPreview").onclick=()=>{bar.remove();Eleve.preview=false;me=null;Admin.current=e.id;Admin.view="eleves";Admin.shell();Admin.load().then(()=>Admin.render())};
+    await Eleve.load(); Eleve.render();
+  },
+  async prospects(){
+    const main=$("#main"); main.innerHTML=`<div class="topbar"><div><h1>Prospects</h1><p class="sub">Chargement…</p></div></div>`;
+    const [{data:pr},{data:pipes},{data:sv}]=await Promise.all([sb.from("ir_prospects").select("*"),sb.from("ir_pipelines").select("*"),sb.from("ir_suivi").select("eleve_id,budget_pub")]);
+    const f=this._pf||{eleve:"",cat:"tous"};
+    const all=pr||[]; const stagesByPipe={}; (pipes||[]).forEach(p=>stagesByPipe[p.pipeline_id]=p.stages);
+    const names={}; this.eleves.forEach(e=>names[e.id]=e.prenom); const eleveOf={}; const byId={}; all.forEach(p=>{eleveOf[p.id]=p.eleve_id;byId[p.id]=p});
+    const linked=this.eleves.filter(e=>e.ghl_location_id);
+    const scoped=crmSort(f.eleve?all.filter(p=>p.eleve_id===f.eleve):all);
+    const budget=(sv||[]).filter(r=>!f.eleve||r.eleve_id===f.eleve).reduce((s,r)=>s+(num(r.budget_pub)||0),0);
+    const st=prospectStats(scoped,budget);
+    // tableau par élève
+    const perE=this.eleves.map(e=>{const l=all.filter(p=>p.eleve_id===e.id);const b=(sv||[]).filter(r=>r.eleve_id===e.id).reduce((s,r)=>s+(num(r.budget_pub)||0),0);return {e,st:prospectStats(l,b)}}).filter(x=>x.st.total||x.e.ghl_location_id);
+    main.innerHTML=`<div class="topbar"><div><h1>Prospects</h1><p class="sub">${linked.length} élève${linked.length>1?"s":""} reliée${linked.length>1?"s":""} à GoHighLevel · ${all.length} prospects au total</p></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><select id="pfE" style="width:auto"><option value="">Toutes les élèves</option>${this.eleves.map(e=>`<option value="${e.id}" ${f.eleve===e.id?"selected":""}>${esc(e.prenom)}</option>`).join("")}</select><button class="btn primary" id="syncAll">↻ Synchroniser</button></div></div>
+    ${rentaHTML(st,{titre:f.eleve?"Rentabilité · "+esc(names[f.eleve]):"Rentabilité globale des pubs"})}
+    ${!f.eleve&&perE.length?`<div class="card" style="margin-top:14px"><h2>Par élève</h2><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Élève</th><th>Prospects</th><th>À rappeler</th><th>Clientes</th><th>Transfo</th><th>CA généré</th><th>Budget pub</th><th>ROI</th></tr></thead><tbody>${perE.map(({e,st})=>`<tr data-el="${e.id}"><td><b>${esc(e.prenom)}</b> <span class="note">${esc(e.institut||"")}</span></td><td>${st.total}</td><td>${st.rappels?`<span class="pill pause">${st.rappels}</span>`:"—"}</td><td>${st.won}</td><td>${st.taux!=null?st.taux+" %":"—"}</td><td>${fmt(st.ca)}</td><td>${fmt(st.budget)}</td><td>${st.roi!=null?"×"+st.roi.toFixed(1):"—"}</td></tr>`).join("")}</tbody></table></div></div>`:""}
+    ${linked.length?"":`<div class="card" style="margin-top:14px"><b>Aucune élève n'est encore reliée.</b><div class="note">Fiche élève → « Modifier la fiche » → identifiant du sous-compte GHL. Et ta clé GHL dans Réglages.</div></div>`}
+    ${crmFilterBar(scoped,f.cat,"chips")}
+    <div id="plist">${prospectsHTML(crmFilter(scoped,f.cat),stagesByPipe,{eleveNames:f.eleve?null:names,canAct:true,filter:f.cat!=="tous"})}</div>`;
+    $("#pfE").onchange=()=>{this._pf={...f,eleve:$("#pfE").value};this.prospects()};
+    main.querySelectorAll("tr[data-el]").forEach(r=>{r.style.cursor="pointer";r.onclick=()=>{this._pf={...f,eleve:r.dataset.el};this.prospects()}});
+    $("#chips").querySelectorAll("[data-cat]").forEach(b=>b.onclick=()=>{this._pf={...f,cat:b.dataset.cat};this.prospects()});
+    $("#syncAll").onclick=async()=>{const b=$("#syncAll");b.disabled=true;b.textContent="Synchronisation…";let n=0,errs=[];for(const e of (f.eleve?linked.filter(x=>x.id===f.eleve):linked)){try{const r=await ghl({action:"sync",eleve_id:e.id});n+=r.count}catch(x){errs.push(e.prenom+" : "+x.message)}}toast(`${n} prospects synchronisés`);if(errs.length){modal(`<h2>Erreurs de synchronisation</h2><ul>${errs.map(x=>`<li>${esc(x)}</li>`).join("")}</ul><div class="actions"><button class="btn" id="cancel">Fermer</button></div>`);$("#cancel").onclick=closeModal}this.prospects()};
+    bindProspects($("#plist"),{eleveIdFor:id=>eleveOf[id],onDone:()=>this.prospects(),byId});
+  },
+  async inbox(){
+    const main=$("#main"); const {data:msgs}=await sb.from("ir_messages").select("*").order("created_at",{ascending:false});
+    const threads={}; (msgs||[]).forEach(m=>{const t=threads[m.eleve_id]=threads[m.eleve_id]||{last:m,unread:0};if(m.auteur==="eleve"&&!m.lu)t.unread++});
+    const rows=Object.entries(threads).map(([id,t])=>({e:this.eleves.find(x=>x.id===id),...t})).filter(r=>r.e).sort((a,b)=>(b.unread-a.unread)||(new Date(b.last.created_at)-new Date(a.last.created_at)));
+    main.innerHTML=`<div class="topbar"><div><h1>Messages</h1><p class="sub">Les conversations avec tes élèves. Clique pour répondre depuis sa fiche.</p></div></div>
+    <div class="card">${rows.length?rows.map(r=>`<div class="item" data-el="${r.e.id}" style="cursor:pointer"><div style="min-width:0"><div class="t">${esc(r.e.prenom)} ${r.unread?`<span class="badge pill" style="background:var(--accent);color:var(--accent-fg)">${r.unread}</span>`:""}</div><div class="s" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60vw">${r.last.auteur==="cindy"?"Toi : ":""}${esc(r.last.contenu)}</div></div><div class="note" style="white-space:nowrap">${dtfr(r.last.created_at)}</div></div>`).join(""):`<div class="note">Aucun message pour l'instant.</div>`}</div>
+    <div class="card" style="margin-top:14px"><h2>Conversations prospects <span class="pill cindy">bientôt</span></h2><div class="note">Les échanges SMS / WhatsApp / Instagram entre les élèves et leurs prospects (GoHighLevel) remonteront ici dès la prochaine étape.</div></div>`;
+    main.querySelectorAll("[data-el]").forEach(r=>r.onclick=()=>{this.current=r.dataset.el;this.view="eleves";this.render()});
+  },
+  async reseaux(){
+    const f=this._rf||this.eleves[0]?.id||""; const names={}; this.eleves.forEach(e=>names[e.id]=e.prenom);
+    const sel=`<select id="rfE" style="width:auto">${this.eleves.map(e=>`<option value="${e.id}" ${f===e.id?"selected":""}>${esc(e.prenom)}</option>`).join("")}</select>`;
+    await Social.render($("#main"),{eleveId:f,prenom:names[f],canConnect:false,eleveNames:null,adminSelect:sel});
+    $("#rfE").onchange=()=>{this._rf=$("#rfE").value;this.reseaux()};
+  },
+  async reglages(){
+    const main=$("#main"); const {data:cfg}=await sb.from("ir_config").select("*"); const c={}; (cfg||[]).forEach(r=>c[r.key]=r.value);
+    main.innerHTML=`<div class="topbar"><div><h1>Réglages</h1></div></div>
+    <div class="two"><div class="card"><h2>Connexion GoHighLevel</h2><p class="note" style="margin:0 0 10px">Clé d'agence (Settings → Private Integrations dans ton agence GHL, avec les droits <b>opportunities</b>, <b>contacts</b>, <b>locations</b> et <b>oauth</b>). Elle est stockée côté serveur et jamais envoyée aux élèves.</p>
+      <div class="field"><label>Clé d'agence (Private Integration token)</label><input id="ghlTok" type="password" value="${esc(c.ghl_agency_token||"")}" placeholder="pit-…" autocomplete="off"></div>
+      <div class="field" style="margin-top:8px"><label>Identifiant de l'agence (Company ID)</label><input id="ghlCo" value="${esc(c.ghl_company_id||"")}" placeholder="Settings → Company → Company ID"></div>
+      <div class="actions"><button class="btn" id="ghlTest">Tester la connexion</button><button class="btn primary" id="ghlSave">Enregistrer</button></div><div id="ghlRes" class="note" style="margin-top:8px"></div></div>
+    <div class="card"><h2>Comment ça marche</h2><ol style="padding-left:18px;margin:0;display:flex;flex-direction:column;gap:6px"><li>Les prospects des pubs arrivent dans le sous-compte GHL de l'élève (déjà en place).</li><li>Sur chaque fiche élève, tu colles l'identifiant de son sous-compte.</li><li>L'élève voit ses prospects dans son espace, les appelle, et change l'étape (RDV pris, cliente…).</li><li>Le changement est écrit dans GHL, et c'est ton workflow GHL « Facebook Conversion API » qui renvoie l'info à Meta.</li></ol></div></div>`;
+    $("#ghlSave").onclick=async()=>{const rows=[{key:"ghl_agency_token",value:$("#ghlTok").value.trim(),updated_at:new Date().toISOString()},{key:"ghl_company_id",value:$("#ghlCo").value.trim(),updated_at:new Date().toISOString()}];const {error}=await sb.from("ir_config").upsert(rows);if(error)return err(error);toast("Enregistré")};
+    $("#ghlTest").onclick=async()=>{const r=$("#ghlRes");r.textContent="Test en cours…";try{const d=await ghl({action:"test"});r.innerHTML=d.ok?`✅ Connexion OK${d.locations?.length?` · sous-comptes visibles : ${d.locations.map(l=>esc(l.name)+" <code>"+esc(l.id)+"</code>").join(", ")}`:""}`:`❌ ${esc(d.message)}`}catch(e){r.textContent="❌ "+e.message}};
+  },
+  template(){
+    const groups={}; this.tpl.forEach(t=>(groups[t.groupe]=groups[t.groupe]||[]).push(t));
+    $("#main").innerHTML=`<div class="topbar"><div><h1>Modèle d'onboarding</h1><p class="sub">S'applique aux nouvelles élèves. Les étapes « côté élève » apparaissent dans leur espace et elles peuvent les cocher elles-mêmes.</p></div></div>
+    <div class="card">${Object.entries(groups).map(([g,its])=>`<div class="group"><h3>${esc(g)}</h3>${its.map(t=>`<div class="check"><label style="flex:1"><input type="text" style="width:100%;border:0;background:none;padding:2px 0" value="${esc(t.label)}" data-tl="${t.id}"></label><select data-tc="${t.id}" style="width:auto;padding:2px 6px;font-size:12px"><option value="cindy" ${t.cote==="cindy"?"selected":""}>côté Cindy</option><option value="eleve" ${t.cote==="eleve"?"selected":""}>côté élève</option></select><button class="rm" style="opacity:1" data-trm="${t.id}">×</button></div>`).join("")}</div>`).join("")}
+    <div class="addline"><input id="tG" placeholder="Groupe" list="groupes" style="flex:0 0 180px"><datalist id="groupes">${Object.keys(groups).map(g=>`<option value="${esc(g)}">`).join("")}</datalist><input id="tL" placeholder="Nouvelle étape…"><select id="tC" style="flex:0 0 120px"><option value="cindy">côté Cindy</option><option value="eleve">côté élève</option></select><button class="btn small" id="tAdd">Ajouter</button></div></div>`;
+    const main=$("#main");
+    main.querySelectorAll("[data-tl]").forEach(i=>i.onchange=async()=>{await sb.from("ir_checklist_template").update({label:i.value}).eq("id",i.dataset.tl);toast("Enregistré")});
+    main.querySelectorAll("[data-tc]").forEach(s=>s.onchange=async()=>{await sb.from("ir_checklist_template").update({cote:s.value}).eq("id",s.dataset.tc);toast("Enregistré")});
+    main.querySelectorAll("[data-trm]").forEach(b=>b.onclick=async()=>{await sb.from("ir_checklist_template").delete().eq("id",b.dataset.trm);await this.load();this.render()});
+    $("#tAdd").onclick=async()=>{const g=$("#tG").value.trim(),l=$("#tL").value.trim();if(!g||!l)return toast("Groupe et étape obligatoires");const pos=Math.max(0,...this.tpl.map(t=>t.position))+10;const {error}=await sb.from("ir_checklist_template").insert({groupe:g,label:l,cote:$("#tC").value,position:pos});if(error)return err(error);await this.load();this.render()};
+  }
+};
+
+// ================= ÉLÈVE =================
+const Eleve={
+  view:"home",
+  async start(){ this.shell(); await this.load(); this.render(); },
+  shell(){
+    root.innerHTML=`<div class="app"><aside class="rail"><div class="brand">Institut Rentable<small>Espace élève</small></div>
+      <button class="nav" data-view="home">Mon parcours</button><button class="nav" data-view="prospects">Mes prospects <span class="badge" id="pbadge" hidden></span></button><button class="nav" data-view="ca">Mon chiffre d'affaires</button><button class="nav" data-view="reseaux">Réseaux sociaux</button><button class="nav" data-view="formation">Formation</button><button class="nav" data-view="docs">Mes documents</button><button class="nav" data-view="rdv">Mes rendez-vous</button><button class="nav" data-view="msg">Messages <span class="badge" id="ubadge" hidden></span></button>
+      <div class="foot"><span>${esc(session.user.email)}</span><button class="btn small" id="out">Se déconnecter</button></div></aside><main class="main" id="main"></main></div>`;
+    root.querySelectorAll(".nav").forEach(b=>b.onclick=()=>{this.view=b.dataset.view;this.render()});
+    $("#out").onclick=logout;
+  },
+  async load(){
+    const [{data:cl},{data:s},{data:d},{data:r},{data:m}]=await Promise.all([
+      sb.from("ir_checklist").select("*").eq("eleve_id",me.id).order("position"),
+      sb.from("ir_suivi").select("*").eq("eleve_id",me.id).order("mois"),
+      sb.from("ir_documents").select("*").eq("eleve_id",me.id).order("created_at"),
+      sb.from("ir_rdv").select("*").eq("eleve_id",me.id).order("date_heure"),
+      sb.from("ir_messages").select("*").eq("eleve_id",me.id).order("created_at")]);
+    this.cl=cl||[]; this.s={}; (s||[]).forEach(x=>this.s[x.mois]=x); this.docList=d||[]; this.rdvList=r||[]; this.msgs=m||[];
+    this.unread=this.msgs.filter(x=>x.auteur==="cindy"&&!x.lu).length;
+    const {data:pp}=await sb.from("ir_prospects").select("statut,rappel_le,derniere_action,nb_tentatives").eq("eleve_id",me.id); this.openProspects=(pp||[]).filter(p=>["rappel","nouveau"].includes(cat(p))).length;
+  },
+  render(){
+    root.querySelectorAll(".nav").forEach(b=>b.classList.toggle("active",b.dataset.view===this.view));
+    const ub=$("#ubadge"); ub.hidden=!this.unread; ub.textContent=this.unread;
+    const pb=$("#pbadge"); if(pb){pb.hidden=!this.openProspects; pb.textContent=this.openProspects||""}
+    this[this.view]();
+  },
+  async home(){
+    const mine=this.cl.filter(i=>i.cote==="eleve"), theirs=this.cl.filter(i=>i.cote!=="eleve");
+    const done=this.cl.filter(i=>i.done).length, total=this.cl.length, pct=total?Math.round(done/total*100):0;
+    const myTodo=mine.filter(i=>!i.done);
+    const stageIdx={onboarding:0,m1:1,m2:2,m3:3,continuation:4,pause:1,termine:4}[me.statut]??0;
+    const next=this.rdvList.find(r=>new Date(r.date_heure)>new Date());
+    const [{data:pr},{data:posts}]=await Promise.all([sb.from("ir_prospects").select("*").eq("eleve_id",me.id),sb.from("ir_posts").select("*").eq("eleve_id",me.id).gte("date_prevue",new Date().toISOString().slice(0,10)).order("date_prevue").limit(4)]);
+    const plist=crmSort(pr||[]); const toCall=plist.filter(p=>["rappel","nouveau"].includes(cat(p))).slice(0,4); const st=prospectStats(plist,0);
+    const obj=num(me.objectif_ca); let last=null; for(const m of [3,2,1]){if(this.s[m]?.ca!=null){last=num(this.s[m].ca);break}} if(last==null)last=num(me.ca_depart);
+    const pctObj=obj&&last!=null?Math.min(100,Math.round(last/obj*100)):0;
+    $("#main").innerHTML=`<div class="welcome"><h1>Salut ${esc(me.prenom)} 👋</h1><p class="sub">${me.institut?esc(me.institut)+" · ":""}${statLabel(me.statut)}${next?` · prochain coaching ${dtfr(next.date_heure)}`:""} · coaching ${hfr(coachingStats(this.rdvList,me.quota_coaching_h).used)} / ${hfr(coachingStats(this.rdvList,me.quota_coaching_h).quota)}</p>
+      <div class="stage">${MOIS.map((m,i)=>`<div class="${stageIdx===i+1?"on":(stageIdx>i+1?"past":"")}">${m[1]} · ${m[2]}</div>`).join("")}</div></div>
+    <div class="tiles">
+      <div class="tile ${toCall.length?"hero":""}" data-go="prospects" style="cursor:pointer"><div class="k">À appeler</div><div class="v">${st.rappels+st.nouveaux}</div><div class="d">${st.rappels?st.rappels+" rappel"+(st.rappels>1?"s":"")+" · ":""}${st.nouveaux} nouveau${st.nouveaux>1?"x":""}</div></div>
+      <div class="tile" data-go="prospects" style="cursor:pointer"><div class="k">CA via prospects</div><div class="v">${fmt(st.ca)}</div><div class="d">${st.won} cliente${st.won>1?"s":""} · transfo ${st.taux!=null?st.taux+" %":"—"}</div></div>
+      <div class="tile" data-go="ca" style="cursor:pointer"><div class="k">Objectif du mois</div><div class="v">${pctObj} %</div><div class="bar" style="margin-top:6px"><i style="width:${pctObj}%"></i></div><div class="d">${last!=null?fmt(last):"—"} sur ${fmt(obj)}</div></div>
+      <div class="tile" data-go="home" style="cursor:pointer"><div class="k">Onboarding</div><div class="v">${pct} %</div><div class="d">${myTodo.length?myTodo.length+" étape"+(myTodo.length>1?"s":"")+" de ton côté":"tout est fait de ton côté"}</div></div>
+    </div>
+    <div class="two">
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="card"><div class="rh" style="display:flex;justify-content:space-between;align-items:baseline"><h2>À appeler maintenant</h2><button class="btn small" data-go="prospects">Tous mes prospects ›</button></div>
+          ${toCall.length?toCall.map(p=>`<div class="item"><div style="min-width:0"><div class="t">${esc(p.nom||"Sans nom")} ${cat(p)==="rappel"?`<span class="pill pause">rappel</span>`:`<span class="pill eleve">nouveau</span>`}</div><div class="s">${esc(p.prestation||"")} · reçu ${ageTxt(p.cree_le)}</div></div><div style="display:flex;gap:6px">${p.tel?`<a class="btn small primary" href="${telLink(p.tel)}">Appeler</a><a class="btn small" href="${waLink(p.tel)}" target="_blank" rel="noopener">WhatsApp</a>`:""}</div></div>`).join(""):`<div class="note">${me.ghl_location_id?"Personne à appeler pour l'instant. Tes nouveaux prospects apparaîtront ici dès l'arrivée.":"Ton CRM sera relié pendant ton onboarding. Tes prospects apparaîtront ici."}</div>`}</div>
+        <div class="card"><h2>À faire de ton côté</h2>${myTodo.length?myTodo.map(i=>`<div class="check"><input type="checkbox" id="c-${i.id}" data-ck="${i.id}"><label for="c-${i.id}">${esc(i.label)}<div class="note">${esc(i.groupe)}</div></label></div>`).join(""):`<div class="note">Tout est fait de ton côté, bravo. Cindy avance sur le reste.</div>`}
+          ${mine.filter(i=>i.done).length?`<h3 style="margin-top:14px">Déjà fait</h3>${mine.filter(i=>i.done).map(i=>`<div class="check done"><input type="checkbox" id="c-${i.id}" data-ck="${i.id}" checked><label for="c-${i.id}">${esc(i.label)}</label><span class="when">${dfr(i.done_at)}</span></div>`).join("")}`:""}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="card"><div style="display:flex;justify-content:space-between;align-items:baseline"><h2>Contenus à venir</h2><button class="btn small" data-go="reseaux">Calendrier ›</button></div>
+          ${(posts||[]).length?posts.map(p=>`<div class="item"><div><div class="t">${esc(p.titre||TYPES[p.type]||"Contenu")}</div><div class="s">${dfr(p.date_prevue)} · ${CANAUX[p.canal]||p.canal} · ${TYPES[p.type]||p.type}</div></div><span class="pill ${PSTAT[p.statut]?.[1]}">${PSTAT[p.statut]?.[0]}</span></div>`).join(""):`<div class="note">Rien de planifié. Ajoute tes 2 posts de la semaine dans le calendrier.</div>`}</div>
+        <div class="card"><h2>Où en est ton accompagnement</h2><div class="bar ${pct===100?"ok":""}"><i style="width:${pct}%"></i></div><div class="pct" style="margin-bottom:10px">${done} / ${total} étapes validées</div>
+          ${theirs.filter(i=>!i.done).slice(0,5).map(i=>`<div class="check locked"><input type="checkbox" disabled><label>${esc(i.label)}<div class="note">${esc(i.groupe)} · géré par Cindy</div></label></div>`).join("")}${theirs.filter(i=>!i.done).length>5?`<div class="note">+ ${theirs.filter(i=>!i.done).length-5} autres étapes</div>`:""}</div>
+      </div>
+    </div>`;
+    $("#main").querySelectorAll("[data-go]").forEach(b=>b.onclick=ev=>{if(ev.target.closest("a"))return;this.view=b.dataset.go;this.render()});
+    $("#main").querySelectorAll("[data-ck]").forEach(c=>c.onchange=async()=>{const {error}=await sb.from("ir_checklist").update({done:c.checked,done_at:c.checked?new Date().toISOString():null}).eq("id",c.dataset.ck);if(error)return err(error);toast(c.checked?"Bien joué !":"Décoché");await this.load();this.render()});
+  },
+  ca(){
+    const obj=num(me.objectif_ca), bars=[["Départ",num(me.ca_depart)],...MOIS.map(m=>[m[1],num(this.s[m[0]]?.ca)])], max=Math.max(obj||0,...bars.map(b=>b[1]||0),1);
+    let last=null; for(const m of [3,2,1]){if(this.s[m]?.ca!=null){last=num(this.s[m].ca);break}} if(last==null)last=num(me.ca_depart);
+    $("#main").innerHTML=`<div class="topbar"><div><h1>Mon chiffre d'affaires</h1><p class="sub">Renseigne ton CA à la fin de chaque mois. Cindy le voit en direct et s'en sert pour ton coaching.</p></div></div>
+    <div class="two"><div class="card"><h2>Ta progression</h2>
+      <div class="chart">${obj?`<div class="goal" style="bottom:${Math.min(obj/max*130,130)}px">objectif ${fmt(obj)}</div>`:""}${bars.map(([l,v])=>`<div class="col ${obj&&v!=null&&v>=obj?"hit":""}"><em>${v!=null?fmt(v):"—"}</em><i style="height:${v?Math.max(v/max*130,3):3}px"></i><span>${l}</span></div>`).join("")}</div>
+      <p class="gap">${obj?(last!=null?(last>=obj?`Objectif atteint, <b>+${fmt(last-obj)}</b> au-dessus. 🔥`:`Il te manque <b>${fmt(obj-last)}</b> pour atteindre ton objectif de ${fmt(obj)}.`):`Ton objectif : <b>${fmt(obj)}</b> par mois.`):"Ton objectif sera fixé avec Cindy lors de l'appel d'onboarding."}</p></div>
+    <div class="card"><h2>Mois par mois</h2><div class="months">${MOIS.map(m=>{const r=this.s[m[0]]||{};return `<div class="month"><div class="mh"><b>${m[1]}</b><span>${m[2]}</span></div><div class="fields">
+      <div class="field"><label>Mon CA du mois (€)</label><input inputmode="decimal" data-m="${m[0]}" data-f="ca" value="${r.ca??""}" placeholder="ex. 8500"></div>
+      <div class="field"><label>Objectif</label><input value="${fmt(r.objectif??obj)}" disabled></div>
+      <div class="field wide"><label>Mon commentaire (ce qui a marché, ce qui a coincé)</label><textarea data-m="${m[0]}" data-f="note_eleve">${esc(r.note_eleve||"")}</textarea></div></div></div>`}).join("")}</div></div></div>`;
+    $("#main").querySelectorAll("[data-m]").forEach(inp=>inp.onchange=async()=>{const f=inp.dataset.f;const patch={[f]:f==="ca"?num(inp.value):inp.value};const {error}=await sb.from("ir_suivi").update(patch).match({eleve_id:me.id,mois:+inp.dataset.m});if(error)return err(error);toast("Enregistré");if(f==="ca"){await this.load();this.render()}});
+  },
+  async docs(){ const tpl=await docTemplate(); const st=docsStats(this.docList,tpl); const groups=docsByCat(this.docList,tpl);
+    $("#main").innerHTML=`<div class="topbar"><div><h1>Mes documents</h1><p class="sub">Tout ce que Cindy et l'équipe créent pour toi, au même endroit. ${st.done} / ${st.total} déjà livrés.</p></div></div>
+    <div class="two">${Object.entries(groups).filter(([c,items])=>items.length).map(([c,items])=>`<div class="card"><h2>${esc(c)}</h2>${items.map(({tpl,doc})=>doc?`<div class="item"><div style="min-width:0"><div class="t"><a href="${esc(doc.url)}" target="_blank" rel="noopener">${esc(doc.titre)}</a></div><div class="s">${dfr(doc.created_at)}</div></div><a class="btn small" href="${esc(doc.url)}" target="_blank" rel="noopener">Ouvrir</a></div>`:`<div class="item"><div style="min-width:0"><div class="t" style="color:var(--muted)">${esc(tpl.titre)}</div><div class="s">en préparation</div></div><span class="pill cindy">à venir</span></div>`).join("")}</div>`).join("")}</div>`; },
+  rdv(){ const now=new Date(); const up=this.rdvList.filter(r=>new Date(r.date_heure)>=now), past=this.rdvList.filter(r=>new Date(r.date_heure)<now).reverse(); const cs=coachingStats(this.rdvList,me.quota_coaching_h);
+    $("#main").innerHTML=`<div class="topbar"><div><h1>Mes rendez-vous</h1></div></div>
+    <div class="card" style="margin-bottom:16px"><h2>Mon coaching</h2>${coachingHTML(cs,{eleve:true})}</div>
+    <div class="two"><div class="card"><h2>À venir</h2>${up.length?up.map(r=>`<div class="item"><div><div class="t">${esc(r.titre)} <span class="note">· ${r.duree_min||60} min</span></div><div class="s">${dtfr(r.date_heure)}</div></div>${r.lien?`<a class="btn small primary" href="${esc(r.lien)}" target="_blank" rel="noopener">Rejoindre</a>`:""}</div>`).join(""):`<div class="note">Aucun rendez-vous planifié pour l'instant.</div>`}</div>
+    <div class="card"><h2>Passés</h2>${past.length?past.map(r=>`<div class="item" style="align-items:flex-start"><div style="min-width:0"><div class="t">${esc(r.titre)} <span class="note">· ${r.duree_min||60} min</span></div><div class="s">${dtfr(r.date_heure)}</div>${r.compte_rendu?`<div class="cr">${esc(r.compte_rendu)}</div>`:""}</div></div>`).join(""):`<div class="note">—</div>`}</div></div>`; },
+  async prospects(){
+    const main=$("#main");
+    main.innerHTML=`<div class="topbar"><div><h1>Mes prospects</h1><p class="sub">${me.ghl_location_id?"Synchronisation avec ton CRM…":"Chargement…"}</p></div></div>`;
+    let syncErr=null; if(me.ghl_location_id){ try{ await ghl(Eleve.preview?{action:"sync",eleve_id:me.id}:{action:"sync"}); }catch(e){ syncErr=e.message; } }
+    const [{data:pr},{data:pipes},{data:sv}]=await Promise.all([sb.from("ir_prospects").select("*").eq("eleve_id",me.id),sb.from("ir_pipelines").select("*").eq("eleve_id",me.id),sb.from("ir_suivi").select("budget_pub").eq("eleve_id",me.id)]);
+    const list=crmSort(pr||[]); const stagesByPipe={}; (pipes||[]).forEach(p=>stagesByPipe[p.pipeline_id]=p.stages); const byId={}; list.forEach(p=>byId[p.id]=p);
+    const budget=(sv||[]).reduce((s,r)=>s+(num(r.budget_pub)||0),0); const st=prospectStats(list,budget);
+    const f=this._pf||(st.rappels?"rappel":st.nouveaux?"nouveau":"encours");
+    main.innerHTML=`<div class="topbar"><div><h1>Mes prospects</h1><p class="sub">${st.rappels?`<b>${st.rappels} à rappeler aujourd'hui.</b> `:""}${st.nouveaux?`${st.nouveaux} nouveau${st.nouveaux>1?"x":""} à appeler.`:""} Un prospect rappelé dans l'heure, c'est un RDV sur deux.</p></div>
+      <div style="display:flex;gap:8px">${me.ghl_location_id?`<button class="btn" id="resync" title="Resynchroniser">↻ CRM</button>`:""}</div></div>
+    ${!me.ghl_location_id?`<div class="card" style="margin-bottom:12px;border-color:var(--info)"><b>Ton CRM n'est pas encore relié.</b><div class="note">Cindy le branche pendant ton onboarding ; en attendant tu vois ici la structure de ton futur suivi.</div></div>`:""}
+    ${syncErr?`<div class="card" style="margin-bottom:12px;border-color:var(--warn)"><b>Synchronisation impossible pour le moment</b><div class="note">${esc(syncErr)} · tu vois la dernière version connue.</div></div>`:""}
+    ${rentaHTML(st)}
+    ${crmFilterBar(list,f,"chips")}
+    <div id="plist">${prospectsHTML(crmFilter(list,f),stagesByPipe,{canAct:true,filter:f!=="tous"})}</div>`;
+    const draw=()=>{const k=this._pf||f;$("#plist").innerHTML=prospectsHTML(crmFilter(list,k),stagesByPipe,{canAct:true,filter:k!=="tous"});bindProspects($("#plist"),{eleveIdFor:()=>me.id,onDone:()=>this.prospects(),byId});};
+    $("#chips").querySelectorAll("[data-cat]").forEach(b=>b.onclick=()=>{this._pf=b.dataset.cat;$("#chips").querySelectorAll(".chip").forEach(c=>c.classList.toggle("on",c===b));draw()});
+    const rs=$("#resync"); if(rs) rs.onclick=()=>this.prospects();
+    const pb=$("#pbadge"); const n=st.rappels+st.nouveaux; pb.hidden=!n; pb.textContent=n;
+    bindProspects($("#plist"),{eleveIdFor:()=>me.id,onDone:()=>this.prospects(),byId});
+  },
+  // ---------- Réseaux sociaux : calendrier de contenu ----------
+  async reseaux(){ await Social.render($("#main"),{eleveId:me.id,prenom:me.prenom,canConnect:true}); },
+  formation(){ Formation.render($("#main"),{prenom:me.prenom}); },
+  async msg(){
+    $("#main").innerHTML=`<div class="topbar"><div><h1>Messages</h1><p class="sub">Une question, un blocage ? Écris ici, Cindy te répond.</p></div></div><div class="card"><div class="thread" id="thread" style="max-height:60vh">${this.msgs.length?this.msgs.map(m=>`<div class="msg ${m.auteur==="eleve"?"me":""}">${esc(m.contenu)}<span class="s">${m.auteur==="cindy"?"Cindy":"Moi"} · ${dtfr(m.created_at)}</span></div>`).join(""):`<div class="note">Aucun message pour l'instant.</div>`}</div>
+    <div class="compose"><textarea id="msgIn" placeholder="Écris ton message…"></textarea><button class="btn primary" id="msgSend">Envoyer</button></div></div>`;
+    const th=$("#thread"); th.scrollTop=th.scrollHeight;
+    if(this.unread){ await sb.from("ir_messages").update({lu:true}).eq("eleve_id",me.id).eq("auteur","cindy").eq("lu",false); this.unread=0; $("#ubadge").hidden=true; }
+    $("#msgSend").onclick=async()=>{const v=$("#msgIn").value.trim();if(!v)return;const {error}=await sb.from("ir_messages").insert({eleve_id:me.id,auteur:"eleve",contenu:v});if(error)return err(error);await this.load();this.render()};
+  }
+};
+
+boot();
+</script>
+</body>
+</html>
