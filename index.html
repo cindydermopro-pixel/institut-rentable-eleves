@@ -578,12 +578,13 @@ const Admin={
       <div class="field"><label>Activité</label><input id="f-metier" value="${esc(e.metier||"")}"></div><div class="field"><label>Instagram</label><input id="f-insta" value="${esc(e.instagram||"")}" placeholder="@compte"></div>
       <div class="field wide"><label>Offre</label><select id="f-offre">${OFFRES.map(o=>`<option ${e.offre===o?"selected":""}>${o}</option>`).join("")}</select></div>
       <div class="field wide"><label>Identifiant du sous-compte GoHighLevel (Location ID)</label><input id="f-ghl" value="${esc(e.ghl_location_id||"")}" placeholder="ex. ve9EPM428h8vShlRW1KT"><div class="note">Dans GHL : Settings → Business Profile du sous-compte. C'est ce qui relie ses prospects à son espace.</div></div>
+      <div class="field wide"><label>Pipeline GHL à suivre (ID, optionnel)</label><input id="f-pipe" value="${esc(e.ghl_pipeline_id||"")}" placeholder="laisser vide = tous les pipelines"><div class="note">Celui que l'élève travaille (ex. « Suivi Prospect »), pas le pipeline KPI.</div></div>
       <div class="field"><label>Date de début</label><input id="f-debut" type="date" value="${e.date_debut||""}"></div>
       <div class="field"><label>Ton des contenus</label><select id="f-ton"><option ${e.ton==="tutoiement"?"selected":""}>tutoiement</option><option ${e.ton==="vouvoiement"?"selected":""}>vouvoiement</option></select></div>
       <div class="field"><label>CA de départ / mois (€)</label><input id="f-cadep" inputmode="decimal" value="${e.ca_depart??""}"></div><div class="field"><label>Objectif CA / mois (€)</label><input id="f-obj" inputmode="decimal" value="${e.objectif_ca??""}"></div>
       </div><div class="actions"><button class="btn" id="cancel">Annuler</button><button class="btn primary" id="ok">${isNew?"Créer la fiche":"Enregistrer"}</button></div>`);
     $("#cancel").onclick=closeModal;
-    $("#ok").onclick=async()=>{const g=id=>$("#"+id).value.trim();const d={prenom:g("f-prenom"),nom:g("f-nom"),email:g("f-email").toLowerCase()||null,institut:g("f-institut"),ville:g("f-ville"),metier:g("f-metier"),instagram:g("f-insta"),offre:g("f-offre"),date_debut:g("f-debut")||null,ghl_location_id:g("f-ghl"),ton:g("f-ton"),ca_depart:num(g("f-cadep")),objectif_ca:num(g("f-obj"))};
+    $("#ok").onclick=async()=>{const g=id=>$("#"+id).value.trim();const d={prenom:g("f-prenom"),nom:g("f-nom"),email:g("f-email").toLowerCase()||null,institut:g("f-institut"),ville:g("f-ville"),metier:g("f-metier"),instagram:g("f-insta"),offre:g("f-offre"),date_debut:g("f-debut")||null,ghl_location_id:g("f-ghl"),ghl_pipeline_id:g("f-pipe"),ton:g("f-ton"),ca_depart:num(g("f-cadep")),objectif_ca:num(g("f-obj"))};
       if(!d.prenom)return toast("Le prénom est obligatoire");
       const q=isNew?sb.from("ir_eleves").insert(d).select().single():sb.from("ir_eleves").update(d).eq("id",e.id).select().single();
       const {data,error}=await q; if(error)return err(error); closeModal(); toast(isNew?"Élève ajoutée":"Fiche mise à jour"); this.current=data.id; this.view="eleves"; await this.load(); this.render();};
@@ -599,7 +600,7 @@ const Admin={
     const main=$("#main"); main.innerHTML=`<div class="topbar"><div><h1>Prospects</h1><p class="sub">Chargement…</p></div></div>`;
     const [{data:pr},{data:pipes},{data:sv}]=await Promise.all([sb.from("ir_prospects").select("*"),sb.from("ir_pipelines").select("*"),sb.from("ir_suivi").select("eleve_id,budget_pub")]);
     const f=this._pf||{eleve:"",cat:"tous"};
-    const all=pr||[]; const stagesByPipe={}; (pipes||[]).forEach(p=>stagesByPipe[p.pipeline_id]=p.stages);
+    const pipeOf={}; this.eleves.forEach(e=>{if(e.ghl_pipeline_id)pipeOf[e.id]=e.ghl_pipeline_id}); const all=(pr||[]).filter(p=>!pipeOf[p.eleve_id]||p.pipeline_id===pipeOf[p.eleve_id]); const stagesByPipe={}; (pipes||[]).forEach(p=>stagesByPipe[p.pipeline_id]=p.stages);
     const names={}; this.eleves.forEach(e=>names[e.id]=e.prenom); const eleveOf={}; const byId={}; all.forEach(p=>{eleveOf[p.id]=p.eleve_id;byId[p.id]=p});
     const linked=this.eleves.filter(e=>e.ghl_location_id);
     const scoped=crmSort(f.eleve?all.filter(p=>p.eleve_id===f.eleve):all);
@@ -679,7 +680,7 @@ const Eleve={
       sb.from("ir_messages").select("*").eq("eleve_id",me.id).order("created_at")]);
     this.cl=cl||[]; this.s={}; (s||[]).forEach(x=>this.s[x.mois]=x); this.docList=d||[]; this.rdvList=r||[]; this.msgs=m||[];
     this.unread=this.msgs.filter(x=>x.auteur==="cindy"&&!x.lu).length;
-    const {data:pp}=await sb.from("ir_prospects").select("statut,rappel_le,derniere_action,nb_tentatives").eq("eleve_id",me.id); this.openProspects=(pp||[]).filter(p=>["rappel","nouveau"].includes(cat(p))).length;
+    let bq=sb.from("ir_prospects").select("statut,rappel_le,derniere_action,nb_tentatives").eq("eleve_id",me.id); if(me.ghl_pipeline_id) bq=bq.eq("pipeline_id",me.ghl_pipeline_id); const {data:pp}=await bq; this.openProspects=(pp||[]).filter(p=>["rappel","nouveau"].includes(cat(p))).length;
   },
   render(){
     root.querySelectorAll(".nav").forEach(b=>b.classList.toggle("active",b.dataset.view===this.view));
@@ -693,7 +694,8 @@ const Eleve={
     const myTodo=mine.filter(i=>!i.done);
     const stageIdx={onboarding:0,m1:1,m2:2,m3:3,continuation:4,pause:1,termine:4}[me.statut]??0;
     const next=this.rdvList.find(r=>new Date(r.date_heure)>new Date());
-    const [{data:pr},{data:posts}]=await Promise.all([sb.from("ir_prospects").select("*").eq("eleve_id",me.id),sb.from("ir_posts").select("*").eq("eleve_id",me.id).gte("date_prevue",new Date().toISOString().slice(0,10)).order("date_prevue").limit(4)]);
+    let hq=sb.from("ir_prospects").select("*").eq("eleve_id",me.id); if(me.ghl_pipeline_id) hq=hq.eq("pipeline_id",me.ghl_pipeline_id);
+    const [{data:pr},{data:posts}]=await Promise.all([hq,sb.from("ir_posts").select("*").eq("eleve_id",me.id).gte("date_prevue",new Date().toISOString().slice(0,10)).order("date_prevue").limit(4)]);
     const plist=crmSort(pr||[]); const toCall=plist.filter(p=>["rappel","nouveau"].includes(cat(p))).slice(0,4); const st=prospectStats(plist,0);
     const obj=num(me.objectif_ca); let last=null; for(const m of [3,2,1]){if(this.s[m]?.ca!=null){last=num(this.s[m].ca);break}} if(last==null)last=num(me.ca_depart);
     const pctObj=obj&&last!=null?Math.min(100,Math.round(last/obj*100)):0;
@@ -747,7 +749,8 @@ const Eleve={
     const main=$("#main");
     main.innerHTML=`<div class="topbar"><div><h1>Mes prospects</h1><p class="sub">${me.ghl_location_id?"Synchronisation avec ton CRM…":"Chargement…"}</p></div></div>`;
     let syncErr=null; if(me.ghl_location_id){ try{ await ghl(Eleve.preview?{action:"sync",eleve_id:me.id}:{action:"sync"}); }catch(e){ syncErr=e.message; } }
-    const [{data:pr},{data:pipes},{data:sv}]=await Promise.all([sb.from("ir_prospects").select("*").eq("eleve_id",me.id),sb.from("ir_pipelines").select("*").eq("eleve_id",me.id),sb.from("ir_suivi").select("budget_pub").eq("eleve_id",me.id)]);
+    let pq=sb.from("ir_prospects").select("*").eq("eleve_id",me.id); if(me.ghl_pipeline_id) pq=pq.eq("pipeline_id",me.ghl_pipeline_id);
+    const [{data:pr},{data:pipes},{data:sv}]=await Promise.all([pq,sb.from("ir_pipelines").select("*").eq("eleve_id",me.id),sb.from("ir_suivi").select("budget_pub").eq("eleve_id",me.id)]);
     const list=crmSort(pr||[]); const stagesByPipe={}; (pipes||[]).forEach(p=>stagesByPipe[p.pipeline_id]=p.stages); const byId={}; list.forEach(p=>byId[p.id]=p);
     const budget=(sv||[]).reduce((s,r)=>s+(num(r.budget_pub)||0),0); const st=prospectStats(list,budget);
     const f=this._pf||(st.rappels?"rappel":st.nouveaux?"nouveau":"encours");
