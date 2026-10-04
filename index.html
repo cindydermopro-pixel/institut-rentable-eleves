@@ -157,6 +157,23 @@ textarea{resize:vertical;min-height:56px}
 .pstage{display:flex;flex-direction:column;gap:6px;min-width:0}
 .pacts{display:flex;gap:6px;flex-wrap:wrap}
 .pnote{min-height:36px;font-size:12px}
+
+/* Code couleur CRM */
+.prospect{border-left:5px solid var(--line)}
+.prospect.cat-nouveau{border-left-color:var(--info);background:color-mix(in srgb,var(--info-soft) 45%,var(--panel))}
+.prospect.cat-rappel{border-left-color:var(--warn);background:color-mix(in srgb,var(--warn-soft) 55%,var(--panel))}
+.prospect.cat-encours{border-left-color:var(--accent)}
+.prospect.cat-cliente{border-left-color:var(--ok);background:color-mix(in srgb,var(--ok-soft) 60%,var(--panel));opacity:1}
+.prospect.cat-perdue{border-left-color:var(--line);opacity:.6}
+.prospect.cat-perdue .pname{text-decoration:line-through;text-decoration-color:var(--muted)}
+.chip-nouveau.on{background:var(--info);border-color:var(--info)}
+.chip-rappel.on{background:var(--warn);border-color:var(--warn)}
+.chip-cliente.on{background:var(--ok);border-color:var(--ok)}
+.chip-perdue.on{background:var(--muted);border-color:var(--muted)}
+.chip-nouveau:not(.on){border-color:var(--info);color:var(--info)}
+.chip-rappel:not(.on){border-color:var(--warn);color:var(--warn)}
+.chip-cliente:not(.on){border-color:var(--ok);color:var(--ok)}
+.prospect.late{border-color:var(--line);border-left-color:var(--warn)}
 .money{display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px}
 .money label{color:var(--muted);font-weight:600}
 .money input{margin-top:2px;padding:5px 8px}
@@ -320,7 +337,7 @@ function rentaHTML(st,{titre="Rentabilité de ta prospection"}={}){
 }
 function prospectCard(p,st,{eleveNames,canAct}){
   const c=cat(p); const late=c==="rappel";
-  return `<div class="prospect ${p.statut!=="open"?"closed":""} ${late?"late":""}" data-id="${p.id}">
+  return `<div class="prospect cat-${c} ${p.statut!=="open"?"closed":""} ${late?"late":""}" data-id="${p.id}">
     <div class="pmain">
       <div class="pname">${esc(p.nom||"Sans nom")} ${c==="nouveau"?`<span class="pill eleve">nouveau</span>`:""}${late?`<span class="pill pause">à rappeler ${ageTxt(p.rappel_le)==="aujourd'hui"?"aujourd'hui":"· en retard"}</span>`:""}${p.acompte_statut==="en_attente"?`<span class="pill pause">acompte en attente${p.acompte?" · "+fmt(p.acompte):""}</span>`:p.acompte_statut==="paye"?`<span class="pill continuation">acompte payé${p.acompte?" · "+fmt(p.acompte):""}</span>`:""}${p.statut!=="open"?`<span class="pill ${GHLSTATUT[p.statut]?.[1]||"termine"}">${GHLSTATUT[p.statut]?.[0]||p.statut}${p.statut==="won"&&(p.montant??p.valeur)?" · "+fmt(p.montant??p.valeur):""}</span>`:""}</div>
       <div class="note">${esc(p.prestation||"")}${p.source?" · "+esc(p.source):""}${eleveNames?" · <b>"+esc(eleveNames[p.eleve_id]||"")+"</b>":""} · reçu ${ageTxt(p.cree_le)}${p.nb_tentatives?` · ${p.nb_tentatives} appel${p.nb_tentatives>1?"s":""}${p.derniere_action?" (dernier "+ageTxt(p.derniere_action)+")":""}`:""}</div>
@@ -358,7 +375,7 @@ function bindProspects(container,{eleveIdFor,onDone,byId}){
   container.querySelectorAll("[data-rappel]").forEach(i=>i.onchange=async()=>{const v=i.value?new Date(i.value+"T09:00").toISOString():null;const {error}=await sb.from("ir_prospects").update({rappel_le:v}).eq("id",i.dataset.rappel);if(error)return err(error);toast(v?"Rappel programmé":"Rappel retiré");onDone()});
 }
 function crmFilterBar(list,current,id){ const counts={}; list.forEach(p=>{counts[cat(p)]=(counts[cat(p)]||0)+1}); counts.tous=list.length;
-  return `<div class="chips" id="${id}">${CATS.map(([k,l])=>`<button class="chip ${current===k?"on":""}" data-cat="${k}">${l}${counts[k]?` <b>${counts[k]}</b>`:""}</button>`).join("")}</div>`; }
+  return `<div class="chips" id="${id}">${CATS.map(([k,l])=>`<button class="chip chip-${k} ${current===k?"on":""}" data-cat="${k}">${l}${counts[k]?` <b>${counts[k]}</b>`:""}</button>`).join("")}</div>`; }
 function crmFilter(list,k){ return k==="tous"?list:list.filter(p=>cat(p)===k); }
 function crmSort(list){ const order={rappel:0,nouveau:1,encours:2,cliente:3,perdue:4}; return [...list].sort((a,b)=>(order[cat(a)]-order[cat(b)])||(new Date(b.cree_le||0)-new Date(a.cree_le||0))); }
 
